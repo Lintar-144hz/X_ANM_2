@@ -17,11 +17,19 @@ export const SiswaAdmin: React.FC = () => {
   const [photoUrl, setPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
-    const data = await DataStore.getStudents();
-    setStudents(data);
-    setLoading(false);
+    setErrorMessage(null);
+    try {
+      const data = await DataStore.getStudents();
+      setStudents(data);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Gagal memuat data dari Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -34,6 +42,7 @@ export const SiswaAdmin: React.FC = () => {
     setAttendanceNumber(students.length > 0 ? Math.max(...students.map(s => s.attendance_number)) + 1 : 1);
     setGender('L');
     setPhotoUrl('');
+    setErrorMessage(null);
     setIsModalOpen(true);
   };
 
@@ -43,6 +52,7 @@ export const SiswaAdmin: React.FC = () => {
     setAttendanceNumber(student.attendance_number);
     setGender(student.gender);
     setPhotoUrl(student.photo_url || '');
+    setErrorMessage(null);
     setIsModalOpen(true);
   };
 
@@ -54,35 +64,45 @@ export const SiswaAdmin: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!deletingStudent) return;
-    await DataStore.deleteStudent(deletingStudent.id);
-    setDeletingStudent(null);
-    loadData();
+    try {
+      await DataStore.deleteStudent(deletingStudent.id);
+      setDeletingStudent(null);
+      await loadData();
+    } catch (err: any) {
+      alert(`Operasi Database Gagal: ${err.message}`);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
+    setErrorMessage(null);
 
-    if (editingStudent) {
-      await DataStore.updateStudent(editingStudent.id, {
-        name,
-        attendance_number: Number(attendanceNumber),
-        gender,
-        photo_url: photoUrl.trim() || undefined
-      });
-    } else {
-      await DataStore.addStudent({
-        name,
-        attendance_number: Number(attendanceNumber),
-        gender,
-        photo_url: photoUrl.trim() || undefined
-      });
+    try {
+      if (editingStudent) {
+        await DataStore.updateStudent(editingStudent.id, {
+          name,
+          attendance_number: Number(attendanceNumber),
+          gender,
+          photo_url: photoUrl.trim() || undefined
+        });
+      } else {
+        await DataStore.addStudent({
+          name,
+          attendance_number: Number(attendanceNumber),
+          gender,
+          photo_url: photoUrl.trim() || undefined
+        });
+      }
+
+      setSaving(false);
+      setIsModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setSaving(false);
+      setErrorMessage(err.message || 'Gagal menyimpan ke Supabase database.');
     }
-
-    setSaving(false);
-    setIsModalOpen(false);
-    loadData();
   };
 
   const filteredStudents = students.filter(s =>
@@ -229,6 +249,11 @@ export const SiswaAdmin: React.FC = () => {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4 text-xs">
+              {errorMessage && (
+                <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-semibold">
+                  ⚠️ {errorMessage}
+                </div>
+              )}
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">Nama Lengkap Siswa</label>
                 <input

@@ -18,11 +18,19 @@ export const KontenAdmin: React.FC = () => {
   const [status, setStatus] = useState<ContentStatus>('published');
   const [saving, setSaving] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
-    const data = await DataStore.getContents();
-    setContents(data);
-    setLoading(false);
+    setErrorMessage(null);
+    try {
+      const data = await DataStore.getContents();
+      setContents(data);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Gagal memuat pengumuman dari Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -48,6 +56,7 @@ export const KontenAdmin: React.FC = () => {
     setBody('');
     setImageUrl('');
     setStatus('published');
+    setErrorMessage(null);
     setIsModalOpen(true);
   };
 
@@ -58,6 +67,7 @@ export const KontenAdmin: React.FC = () => {
     setBody(c.body);
     setImageUrl(c.image_url || '');
     setStatus(c.status);
+    setErrorMessage(null);
     setIsModalOpen(true);
   };
 
@@ -69,37 +79,47 @@ export const KontenAdmin: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!deletingItem) return;
-    await DataStore.deleteContent(deletingItem.id);
-    setDeletingItem(null);
-    loadData();
+    try {
+      await DataStore.deleteContent(deletingItem.id);
+      setDeletingItem(null);
+      await loadData();
+    } catch (err: any) {
+      alert(`Gagal menghapus dari Supabase: ${err.message}`);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !body.trim()) return;
     setSaving(true);
+    setErrorMessage(null);
 
-    if (editingContent) {
-      await DataStore.updateContent(editingContent.id, {
-        title,
-        slug: slug.trim() || title.toLowerCase().replace(/\s+/g, '-'),
-        body,
-        image_url: imageUrl.trim() || undefined,
-        status
-      });
-    } else {
-      await DataStore.addContent({
-        title,
-        slug: slug.trim() || title.toLowerCase().replace(/\s+/g, '-'),
-        body,
-        image_url: imageUrl.trim() || undefined,
-        status
-      });
+    try {
+      if (editingContent) {
+        await DataStore.updateContent(editingContent.id, {
+          title,
+          slug: slug.trim() || title.toLowerCase().replace(/\s+/g, '-'),
+          body,
+          image_url: imageUrl.trim() || undefined,
+          status
+        });
+      } else {
+        await DataStore.addContent({
+          title,
+          slug: slug.trim() || title.toLowerCase().replace(/\s+/g, '-'),
+          body,
+          image_url: imageUrl.trim() || undefined,
+          status
+        });
+      }
+
+      setSaving(false);
+      setIsModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setSaving(false);
+      setErrorMessage(err.message || 'Gagal menyimpan konten ke Supabase.');
     }
-
-    setSaving(false);
-    setIsModalOpen(false);
-    loadData();
   };
 
   const filtered = contents.filter(c =>
@@ -229,6 +249,11 @@ export const KontenAdmin: React.FC = () => {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4 text-xs">
+              {errorMessage && (
+                <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-semibold">
+                  ⚠️ {errorMessage}
+                </div>
+              )}
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">Judul Pengumuman</label>
                 <input

@@ -13,15 +13,23 @@ export const PiketAdmin: React.FC = () => {
 
   const days: DayOfWeek[] = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
-    const [st, sch] = await Promise.all([
-      DataStore.getStudents(),
-      DataStore.getSchedules()
-    ]);
-    setStudents(st);
-    setSchedules(sch);
-    setLoading(false);
+    setErrorMsg(null);
+    try {
+      const [st, sch] = await Promise.all([
+        DataStore.getStudents(),
+        DataStore.getSchedules()
+      ]);
+      setStudents(st);
+      setSchedules(sch);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal memuat jadwal piket dari Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -44,9 +52,15 @@ export const PiketAdmin: React.FC = () => {
 
   const handleSaveDaySchedules = async () => {
     setSaving(true);
-    await DataStore.setDaySchedules(activeDay, selectedStudentIds);
-    await loadData();
-    setSaving(false);
+    setErrorMsg(null);
+    try {
+      await DataStore.setDaySchedules(activeDay, selectedStudentIds);
+      await loadData();
+    } catch (err: any) {
+      alert(`Gagal menyimpan jadwal piket di Supabase: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

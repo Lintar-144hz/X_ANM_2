@@ -15,7 +15,10 @@ export function getSupabaseCredentials() {
     url && 
     key && 
     !url.includes('YOUR_SUPABASE_URL') && 
+    !url.includes('your-supabase-project') &&
     !url.includes('example.supabase.co') &&
+    !key.includes('your-supabase-anon-key') &&
+    !key.includes('your-anon-key') &&
     url.startsWith('https://')
   );
 

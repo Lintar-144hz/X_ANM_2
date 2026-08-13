@@ -9,12 +9,20 @@ export const SettingsAdmin: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   useEffect(() => {
     const loadSettings = async () => {
       setLoading(true);
-      const data = await DataStore.getSettings();
-      setSettings(data);
-      setLoading(false);
+      setErrorMsg(null);
+      try {
+        const data = await DataStore.getSettings();
+        setSettings(data);
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Gagal memuat pengaturan dari Supabase.');
+      } finally {
+        setLoading(false);
+      }
     };
     loadSettings();
   }, []);
@@ -23,10 +31,16 @@ export const SettingsAdmin: React.FC = () => {
     e.preventDefault();
     if (!settings) return;
     setSaving(true);
-    await DataStore.updateSettings(settings);
-    setSaving(false);
-    setSavedMsg(true);
-    setTimeout(() => setSavedMsg(false), 3000);
+    setErrorMsg(null);
+    try {
+      await DataStore.updateSettings(settings);
+      setSavedMsg(true);
+      setTimeout(() => setSavedMsg(false), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal menyimpan pengaturan ke Supabase.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading || !settings) {
@@ -41,6 +55,12 @@ export const SettingsAdmin: React.FC = () => {
           Ubah nama kelas, judul hero, deskripsi, dan teks footer yang tampil secara live di website public.
         </p>
       </div>
+
+      {errorMsg && (
+        <div className="p-4 bg-rose-950/80 border border-rose-800 text-rose-300 text-xs rounded-2xl flex items-center gap-2 font-semibold">
+          ⚠️ {errorMsg}
+        </div>
+      )}
 
       {savedMsg && (
         <div className="p-4 bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs rounded-2xl flex items-center gap-2">

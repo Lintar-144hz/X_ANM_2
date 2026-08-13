@@ -21,15 +21,23 @@ export const OrganisasiAdmin: React.FC = () => {
     'MPK 2'
   ];
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
-    const [st, og] = await Promise.all([
-      DataStore.getStudents(),
-      DataStore.getOrganization()
-    ]);
-    setStudents(st);
-    setOrg(og);
-    setLoading(false);
+    setErrorMsg(null);
+    try {
+      const [st, og] = await Promise.all([
+        DataStore.getStudents(),
+        DataStore.getOrganization()
+      ]);
+      setStudents(st);
+      setOrg(og);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal memuat data organisasi dari Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -38,9 +46,15 @@ export const OrganisasiAdmin: React.FC = () => {
 
   const handleSelectStudent = async (pos: ClassPosition, studentId: string) => {
     setSavingPos(pos);
-    await DataStore.updateOrganizationPosition(pos, studentId);
-    await loadData();
-    setSavingPos(null);
+    setErrorMsg(null);
+    try {
+      await DataStore.updateOrganizationPosition(pos, studentId);
+      await loadData();
+    } catch (err: any) {
+      alert(`Gagal memperbarui posisi di Supabase: ${err.message}`);
+    } finally {
+      setSavingPos(null);
+    }
   };
 
   return (
