@@ -234,13 +234,13 @@ export const DataStore = {
     }));
   },
 
-  async updateOrganizationPosition(position: string, studentId: string): Promise<void> {
+  async updateOrganizationPosition(position: string, studentId: string, customName?: string): Promise<void> {
     const supabase = getSupabase();
     if (supabase) {
       try {
         await supabase
           .from('organization')
-          .upsert({ position, student_id: studentId }, { onConflict: 'position' });
+          .upsert({ position, student_id: studentId || null, custom_name: customName || null }, { onConflict: 'position' });
       } catch (e) {
         console.warn('Supabase org position update error:', e);
       }
@@ -250,11 +250,13 @@ export const DataStore = {
     const existingIndex = current.findIndex(o => o.position === position);
     if (existingIndex >= 0) {
       current[existingIndex].student_id = studentId;
+      current[existingIndex].custom_name = customName;
     } else {
       current.push({
         id: `org-${Date.now()}`,
         position: position as any,
         student_id: studentId,
+        custom_name: customName,
         order_index: current.length + 1
       });
     }

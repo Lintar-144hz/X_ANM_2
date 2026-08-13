@@ -19,36 +19,35 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setErrorMsg(null);
 
+    const inputEmail = email.trim().toLowerCase();
+    const inputPassword = password;
+
     const supabase = getSupabase();
 
-    if (supabase) {
+    if (supabase && isConfigured) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
+          email: inputEmail,
+          password: inputPassword
         });
 
         if (!error && data.user) {
-          onLoginSuccess(data.user.email || email);
+          onLoginSuccess(data.user.email || inputEmail);
           setLoading(false);
           return;
         }
       } catch (err: any) {
-        console.warn('Supabase auth attempt failed, falling back to local mode:', err);
+        console.warn('Supabase auth attempt failed, checking fallback credentials:', err);
       }
     }
 
-    // Local / Demo login fallback: allow login with any credentials if Supabase Auth user is not registered yet
-    if (email && password) {
-      onLoginSuccess(email);
+    // Check specified admin credentials
+    if (inputEmail === 'taroxxai@gmail.com' && inputPassword === 'Lintar_123') {
+      onLoginSuccess('taroxxai@gmail.com');
     } else {
-      setErrorMsg('Masukkan email dan password untuk masuk.');
+      setErrorMsg('Email atau password admin tidak valid. Akses ditolak.');
     }
     setLoading(false);
-  };
-
-  const handleDemoLogin = () => {
-    onLoginSuccess('admin.animasi2@sekolah.sch.id');
   };
 
   return (
@@ -62,7 +61,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <Shield className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">CMS Admin Panel</h1>
-          <p className="text-xs text-slate-400">Masuk menggunakan Supabase Authentication</p>
+          <p className="text-xs text-slate-400">Masuk dengan Kredensial Admin Resmi</p>
         </div>
 
         {errorMsg && (
@@ -82,7 +81,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <input
                 type="email"
                 required
-                placeholder="admin@sekolah.sch.id"
+                placeholder="taroxxai@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
@@ -110,31 +109,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {loading ? (
               <span className="animate-pulse">Authenticating...</span>
             ) : (
               <>
                 <LogIn className="w-4 h-4" />
-                Masuk ke Dashboard
+                Masuk ke Dashboard CMS
               </>
             )}
           </button>
         </form>
-
-        <div className="pt-4 border-t border-slate-800/80 text-center space-y-3">
-          <p className="text-[11px] text-slate-400">
-            Ingin menguji CMS langsung tanpa setup Supabase Auth dulu?
-          </p>
-          <button
-            onClick={handleDemoLogin}
-            className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-medium text-xs border border-slate-700/80 flex items-center justify-center gap-2 transition-all"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Masuk dengan Akun Admin Demo
-          </button>
-        </div>
       </div>
     </div>
   );

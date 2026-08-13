@@ -23,6 +23,7 @@ export interface OrganizationMember {
   id: string;
   position: ClassPosition;
   student_id: string;
+  custom_name?: string;
   student?: Student;
   order_index: number;
   created_at?: string;

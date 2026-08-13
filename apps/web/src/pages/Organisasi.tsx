@@ -82,6 +82,7 @@ export const Organisasi: React.FC = () => {
               <img
                 src={student.photo_url}
                 alt={student.name}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -94,19 +95,15 @@ export const Organisasi: React.FC = () => {
           {/* Name & Details */}
           <div className="flex-1 min-w-0 text-left">
             <h4 className="font-extrabold text-sm sm:text-base text-slate-900 truncate leading-snug">
-              {student?.name || 'EDIT DISINI'}
+              {member?.custom_name || student?.name || 'EDIT DISINI'}
             </h4>
-            <div className="flex items-center gap-2 mt-0.5">
-              {student ? (
+            {student && (
+              <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                   Absen #{student.attendance_number}
                 </span>
-              ) : (
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                  Belum Ditentukan
-                </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

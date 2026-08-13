@@ -46,11 +46,17 @@ export const SiswaAdmin: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, studentName: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus data siswa "${studentName}"?`)) {
-      await DataStore.deleteStudent(id);
-      loadData();
-    }
+  const [deletingStudent, setDeletingStudent] = useState<{ id: string; name: string } | null>(null);
+
+  const handleDeleteClick = (id: string, studentName: string) => {
+    setDeletingStudent({ id, name: studentName });
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingStudent) return;
+    await DataStore.deleteStudent(deletingStudent.id);
+    setDeletingStudent(null);
+    loadData();
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -143,7 +149,7 @@ export const SiswaAdmin: React.FC = () => {
                     <td className="px-5 py-3.5">
                       <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
                         {s.photo_url ? (
-                          <img src={s.photo_url} alt={s.name} className="w-full h-full object-cover" />
+                          <img src={s.photo_url} alt={s.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center font-bold text-slate-400">
                             {s.name.charAt(0)}
@@ -168,7 +174,7 @@ export const SiswaAdmin: React.FC = () => {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(s.id, s.name)}
+                          onClick={() => handleDeleteClick(s.id, s.name)}
                           className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -182,6 +188,32 @@ export const SiswaAdmin: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deletingStudent && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+            <h3 className="font-bold text-lg text-rose-400">Hapus Data Siswa?</h3>
+            <p className="text-xs text-slate-300">
+              Apakah Anda yakin ingin menghapus data siswa <span className="font-bold text-white">"{deletingStudent.name}"</span>? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setDeletingStudent(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/20"
+              >
+                Hapus Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
@@ -237,10 +269,12 @@ export const SiswaAdmin: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">URL Foto Profil (Opsional)</label>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  URL Foto Profil (Opsional - Link GitHub, Instagram, Unsplash, dll)
+                </label>
                 <input
                   type="url"
-                  placeholder="https://images.unsplash.com/..."
+                  placeholder="https://github.com/username.png atau link gambar Instagram / web"
                   value={photoUrl}
                   onChange={(e) => setPhotoUrl(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-slate-100 focus:border-cyan-500 focus:outline-none"

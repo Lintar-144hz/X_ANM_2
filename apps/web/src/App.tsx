@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
-import { SupabaseBanner } from './components/SupabaseBanner';
 import { Home } from './pages/Home';
 import { Organisasi } from './pages/Organisasi';
 import { Siswa } from './pages/Siswa';
@@ -30,7 +29,6 @@ export default function App({ onSwitchToAdmin }: AppProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      <SupabaseBanner />
       <Navbar
         currentPath={currentPath}
         onNavigate={(path) => handleNavigate(path)}

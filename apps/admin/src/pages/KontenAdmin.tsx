@@ -61,11 +61,17 @@ export const KontenAdmin: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, titleStr: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus konten "${titleStr}"?`)) {
-      await DataStore.deleteContent(id);
-      loadData();
-    }
+  const [deletingItem, setDeletingItem] = useState<{ id: string; title: string } | null>(null);
+
+  const handleDeleteClick = (id: string, titleStr: string) => {
+    setDeletingItem({ id, title: titleStr });
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingItem) return;
+    await DataStore.deleteContent(deletingItem.id);
+    setDeletingItem(null);
+    loadData();
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -171,7 +177,7 @@ export const KontenAdmin: React.FC = () => {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id, item.title)}
+                    onClick={() => handleDeleteClick(item.id, item.title)}
                     className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -180,6 +186,32 @@ export const KontenAdmin: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+            <h3 className="font-bold text-lg text-rose-400">Hapus Konten Pengumuman?</h3>
+            <p className="text-xs text-slate-300">
+              Apakah Anda yakin ingin menghapus konten <span className="font-bold text-white">"{deletingItem.title}"</span>? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setDeletingItem(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/20"
+              >
+                Hapus Sekarang
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
