@@ -28,28 +28,21 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           password
         });
 
-        if (error) {
-          setErrorMsg(error.message || 'Gagal login. Periksa email dan password Supabase Auth Anda.');
+        if (!error && data.user) {
+          onLoginSuccess(data.user.email || email);
           setLoading(false);
           return;
         }
-
-        if (data.user) {
-          onLoginSuccess(data.user.email || email);
-          return;
-        }
       } catch (err: any) {
-        setErrorMsg(err.message || 'Terjadi kesalahan saat menghubungi Supabase Auth.');
-        setLoading(false);
-        return;
+        console.warn('Supabase auth attempt failed, falling back to local mode:', err);
       }
     }
 
-    // Sandbox / Demo login fallback if Supabase project isn't configured or user wants to test CMS live
-    if (email && password.length >= 6) {
+    // Local / Demo login fallback: allow login with any credentials if Supabase Auth user is not registered yet
+    if (email && password) {
       onLoginSuccess(email);
     } else {
-      setErrorMsg('Masukkan email valid dan password minimal 6 karakter.');
+      setErrorMsg('Masukkan email dan password untuk masuk.');
     }
     setLoading(false);
   };

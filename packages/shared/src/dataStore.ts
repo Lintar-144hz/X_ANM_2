@@ -22,8 +22,26 @@ const STORAGE_KEYS = {
   SCHEDULES: 'x_animasi_schedules',
   CONTENTS: 'x_animasi_contents',
   SETTINGS: 'x_animasi_settings',
-  MEDIA: 'x_animasi_media'
+  MEDIA: 'x_animasi_media',
+  VERSION: 'x_animasi_data_version'
 };
+
+const CURRENT_DATA_VERSION = 'v3_36_blank_students';
+
+// Synchronize local storage to current default if version mismatch or initial load
+if (typeof window !== 'undefined') {
+  try {
+    const savedVer = localStorage.getItem(STORAGE_KEYS.VERSION);
+    if (savedVer !== CURRENT_DATA_VERSION) {
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
+      localStorage.setItem(STORAGE_KEYS.ORGANIZATION, JSON.stringify(INITIAL_ORGANIZATION));
+      localStorage.setItem(STORAGE_KEYS.SCHEDULES, JSON.stringify(INITIAL_SCHEDULES));
+      localStorage.setItem(STORAGE_KEYS.VERSION, CURRENT_DATA_VERSION);
+    }
+  } catch (err) {
+    console.warn('LocalStorage version sync error:', err);
+  }
+}
 
 function getLocal<T>(key: string, defaultVal: T): T {
   if (typeof window === 'undefined') return defaultVal;

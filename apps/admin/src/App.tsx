@@ -17,6 +17,7 @@ interface AdminAppProps {
 export default function App({ onSwitchToPublic }: AdminAppProps) {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [currentRoute, setCurrentRoute] = useState('/dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleLoginSuccess = (email: string) => {
     setUserEmail(email);
@@ -42,23 +43,26 @@ export default function App({ onSwitchToPublic }: AdminAppProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row font-sans overflow-x-hidden">
       {/* Sidebar */}
       <Sidebar
         currentRoute={currentRoute}
         onNavigate={(route) => setCurrentRoute(route)}
         onLogout={handleLogout}
         onSwitchToPublic={onSwitchToPublic}
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full">
         <Header
           title={routeTitles[currentRoute] || 'CMS Admin'}
           userEmail={userEmail}
+          onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
         />
 
-        <main className="p-6 sm:p-8 flex-1 overflow-y-auto">
+        <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
           {currentRoute === '/dashboard' && <Dashboard onNavigate={(route) => setCurrentRoute(route)} />}
           {currentRoute === '/siswa' && <SiswaAdmin />}
           {currentRoute === '/organisasi' && <OrganisasiAdmin />}
@@ -71,3 +75,4 @@ export default function App({ onSwitchToPublic }: AdminAppProps) {
     </div>
   );
 }
+
