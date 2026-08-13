@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Users, Award, Calendar, Newspaper, Menu, X } from 'lucide-react';
+import { Sparkles, Users, Award, Calendar, Newspaper, Menu, X, Shield, ArrowUpRight } from 'lucide-react';
 
 interface NavbarProps {
   currentPath: string;
@@ -9,6 +9,17 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onSwitchToAdmin }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [xa2ClickCount, setXa2ClickCount] = useState(0);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+
+  const handleXa2Click = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newCount = xa2ClickCount + 1;
+    setXa2ClickCount(newCount);
+    if (newCount >= 10) {
+      setAdminUnlocked(true);
+    }
+  };
 
   const navItems = [
     { path: '/', label: 'Beranda', icon: Sparkles },
@@ -23,24 +34,34 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onSwitc
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <button 
-            onClick={() => { onNavigate('/'); setMobileOpen(false); }}
-            className="flex items-center gap-3 group text-left focus:outline-none"
-          >
-            <div className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 shadow-md group-hover:scale-105 transition-transform flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div
+              onClick={handleXa2Click}
+              title={adminUnlocked ? "CMS Admin Terbuka" : "Klik 10x untuk membuka CMS Admin"}
+              className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 shadow-md hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer select-none relative group"
+            >
               <span className="font-black text-sm tracking-widest text-amber-400">
                 XA2
               </span>
+              {xa2ClickCount > 0 && xa2ClickCount < 10 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-cyan-400 text-slate-950 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border border-slate-950 shadow-sm">
+                  {xa2ClickCount}
+                </span>
+              )}
             </div>
-            <div>
+
+            <button 
+              onClick={() => { onNavigate('/'); setMobileOpen(false); }}
+              className="text-left focus:outline-none group"
+            >
               <span className="font-extrabold text-lg sm:text-xl tracking-tight block text-slate-950 group-hover:text-amber-500 transition-colors leading-none">
                 X ANIMASI 2
               </span>
               <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mt-0.5">
                 Official Website
               </span>
-            </div>
-          </button>
+            </button>
+          </div>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1.5">
@@ -62,10 +83,31 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onSwitc
                 </button>
               );
             })}
+
+            {/* Secret Unlocked Admin Button */}
+            {adminUnlocked && onSwitchToAdmin && (
+              <button
+                onClick={onSwitchToAdmin}
+                className="ml-2 px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase bg-cyan-400 hover:bg-cyan-300 text-slate-950 border-2 border-slate-950 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 animate-pulse"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                CMS Admin
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
+            {adminUnlocked && onSwitchToAdmin && (
+              <button
+                onClick={onSwitchToAdmin}
+                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-cyan-400 text-slate-950 border border-slate-950 flex items-center gap-1"
+              >
+                <Shield className="w-3 h-3" />
+                Admin
+              </button>
+            )}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="p-2.5 rounded-xl bg-slate-950 text-white hover:bg-slate-800 focus:outline-none"
@@ -101,6 +143,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onSwitc
               </button>
             );
           })}
+
+          {adminUnlocked && onSwitchToAdmin && (
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  onSwitchToAdmin();
+                  setMobileOpen(false);
+                }}
+                className="w-full py-3 rounded-xl bg-cyan-400 text-slate-950 border-2 border-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]"
+              >
+                <Shield className="w-4 h-4" />
+                Masuk CMS Admin
+              </button>
+            </div>
+          )}
         </div>
       )}
     </nav>

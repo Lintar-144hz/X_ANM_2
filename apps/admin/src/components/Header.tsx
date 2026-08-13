@@ -51,18 +51,35 @@ export const Header: React.FC<HeaderProps> = ({ title, userEmail, onToggleMobile
         <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => setOpenModal(true)}
-            title="Klik untuk konfigurasi Supabase"
-            className="cursor-pointer hover:opacity-90 transition-opacity"
+            title={isConfigured ? 'Database Cloud Supabase Terhubung & Aktif' : 'Database Supabase Tidak Aktif (Menggunakan Local Storage)'}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all shadow-md cursor-pointer ${
+              isConfigured
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900/90 shadow-emerald-500/20'
+                : 'bg-rose-950/80 text-rose-300 border-rose-500/50 hover:bg-rose-900/90 shadow-rose-500/20'
+            }`}
           >
-            {isConfigured ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-xs font-mono">
-                <Database className="w-3 h-3" /> Supabase Connected
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-800/50 text-amber-400 text-xs font-mono">
-                <Database className="w-3 h-3" /> Status: Demo Mode (Klik)
-              </span>
-            )}
+            {/* Blinking / Flashing Dot Indicator */}
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isConfigured ? 'bg-emerald-400' : 'bg-rose-400'
+                }`}
+              ></span>
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  isConfigured ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              ></span>
+            </span>
+
+            <Database className="w-3.5 h-3.5" />
+            <span className="tracking-wide">
+              {isConfigured ? (
+                <span className="text-emerald-300 font-extrabold">Supabase Aktif</span>
+              ) : (
+                <span className="text-rose-300 font-extrabold">Supabase Nonaktif</span>
+              )}
+            </span>
           </button>
 
           <div className="flex items-center gap-2 bg-slate-950 px-2.5 sm:px-3.5 py-1.5 rounded-full border border-slate-800">
