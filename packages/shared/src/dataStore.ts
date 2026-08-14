@@ -1,4 +1,4 @@
-import { getSupabase } from './supabaseClient';
+import { getSupabase } from './lib/supabase';
 import {
   Student,
   OrganizationMember,
