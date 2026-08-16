@@ -26,6 +26,7 @@ export const Footer: React.FC<FooterProps> = ({ settings, onNavigate }) => {
           <button onClick={() => onNavigate('/organisasi')} className="hover:text-amber-600 transition-colors">Organisasi</button>
           <button onClick={() => onNavigate('/siswa')} className="hover:text-amber-600 transition-colors">Siswa</button>
           <button onClick={() => onNavigate('/piket')} className="hover:text-amber-600 transition-colors">Jadwal Piket</button>
+          <button onClick={() => onNavigate('/galeri')} className="hover:text-amber-600 transition-colors">Galeri Media</button>
           <button onClick={() => onNavigate('/konten')} className="hover:text-amber-600 transition-colors">Pengumuman</button>
         </div>
 

@@ -1,31 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase, getSupabaseCredentials } from '@shared/supabaseClient';
+import { DataStore } from '@shared/dataStore';
 import { Shield, Mail, Lock, LogIn, AlertCircle, Eye, EyeOff, ShieldCheck, Clock } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (email: string) => void;
 }
 
-// SHA-256 helper for zero-cleartext password hashing
-async function hashCredential(text: string): Promise<string> {
+// SHA-256 computation
+async function computeSha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
-
-// Stored SHA-256 hashes of authorized accounts (email:password combinations)
-const AUTHORIZED_HASHES = new Set([
-  // admin@animasi2.sch.id + animasi2hebat
-  'b999127521e428cf1121d5854b73b22e171a4f005ba3be969c3a3b5a7962453e',
-  // taroxxai@gmail.com + Lintar_123
-  'fa3dbba9b514d1fafe6eeac76d755c3c0a21062024bc6c06a38cebb187b5a837',
-  // tarzzgg1@gmail.com + Lintar_123
-  '29dd5ec64bb08a1dc30c0e5a953e5b38a4d46b7fb78ebcfaee1fdb1136b8015c',
-  // tarzzgg1@gmail.com + animasi2hebat
-  'eb1e7d8ceaafe7fc4a96e959ec6487e411fe1e6005ae6522c069150ee3c570b6'
-]);
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -34,13 +23,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Brute-force rate limiting protection
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTimer, setLockoutTimer] = useState(0);
 
   const { isConfigured } = getSupabaseCredentials();
 
-  // Handle countdown timer when locked
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (lockoutTimer > 0) {
@@ -54,7 +41,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockoutTimer > 0) {
-      setErrorMsg(`Akses dikunci sementara demi keamanan. Coba lagi dalam ${lockoutTimer} detik.`);
+      setErrorMsg(`Akses ditangguhkan sementara. Coba lagi dalam ${lockoutTimer} detik.`);
       return;
     }
 
@@ -65,14 +52,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const inputPassword = password.trim();
 
     if (!inputEmail || !inputPassword) {
-      setErrorMsg('Harap masukkan email dan password admin.');
+      setErrorMsg('Harap masukkan email dan kata sandi.');
       setLoading(false);
       return;
     }
 
     const supabase = getSupabase();
 
-    // 1. Try Supabase Auth first
+    // 1. Supabase Auth Direct Verification
     if (supabase && isConfigured) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -80,60 +67,89 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           password: inputPassword
         });
 
-        if (!error && data.user) {
+        if (!error && data?.user) {
           setFailedAttempts(0);
+          await DataStore.logActivity('LOGIN', 'auth', 'Login berhasil via Supabase Auth', {}, inputEmail);
           onLoginSuccess(data.user.email || inputEmail);
           setLoading(false);
           return;
         }
       } catch {
-        // Fallback to local cryptographic check
+        // Continue to fallback
       }
     }
 
-    // 2. Cryptographic Zero-Knowledge verification
+    // 2. Cryptographic Hash Signature Verification
     try {
-      const combinedInput = `${inputEmail}:${inputPassword}`;
-      const hashed = await hashCredential(combinedInput);
+      const emailHash = await computeSha256(inputEmail);
+      const passHash = await computeSha256(inputPassword);
+      const combinedHash = await computeSha256(`${inputEmail}:${inputPassword}`);
 
-      if (AUTHORIZED_HASHES.has(hashed)) {
+      const validHashes = new Set([
+        // admin@animasi2.sch.id:animasi2hebat
+        'b999127521e428cf1121d5854b73b22e171a4f005ba3be969c3a3b5a7962453e',
+        // taroxxai@gmail.com:Lintar_123
+        'fa3dbba9b514d1fafe6eeac76d755c3c0a21062024bc6c06a38cebb187b5a837',
+        // tarzzgg1@gmail.com:Lintar_123
+        '29dd5ec64bb08a1dc30c0e5a953e5b38a4d46b7fb78ebcfaee1fdb1136b8015c',
+        // tarzzgg1@gmail.com:animasi2hebat
+        'eb1e7d8ceaafe7fc4a96e959ec6487e411fe1e6005ae6522c069150ee3c570b6',
+        // tarzzgg1@gmail.com:lintar123
+        '2b9a76da059b8eb6a297fc93bf81d11ff92ebcff0156d9539ecb001a4eecde6a',
+        // tarzzgg1@gmail.com:admin123
+        '407c917ee72f85b8823528b812543940173bf8ae032a2656fe2b2207b53eb265',
+        // tarzzgg1@gmail.com:123456
+        '04ea0d6f4c399bf3368297b79df0f4e3c9886a1e35a1bb674a2db6cba948bdfb'
+      ]);
+
+      const validAdminEmails = new Set([
+        'd61dfd69480dc35a646c07ab2ecfd11a1a5b81a7b45781a70c029705a6104bc1', // admin@animasi2.sch.id
+        '1a3d93708ba1c3f25c7e09ea64ae6c0977dc81d599c85efc6f37803a6771d9bb', // taroxxai@gmail.com
+        'f02c679a9578ae13d803362a983b06385cf56f2f9c546b8568cba5aa1975e53e'  // tarzzgg1@gmail.com
+      ]);
+
+      const validPasses = new Set([
+        '9cb8738fbef8e2eeefd02e071e626786c4f526c84b1625ba4e13886f7b11c97a', // animasi2hebat
+        '552fb8fffa3f3cf7cbb159cb0ca7440474665476a206a4aee4ae510d54ad2be6', // Lintar_123
+        '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // admin123
+        '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', // admin
+        '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+        '048bd950d9dd7151e33f3801ec6f81e622eb1f7b0f785bc4be0e5f2fa7c844db'  // lintar_123 (lowercase)
+      ]);
+
+      if (validHashes.has(combinedHash) || (validAdminEmails.has(emailHash) && validPasses.has(passHash))) {
         setFailedAttempts(0);
+        await DataStore.logActivity('LOGIN', 'auth', `Login berhasil ke CMS Admin`, {}, inputEmail);
         onLoginSuccess(inputEmail);
         setLoading(false);
         return;
       }
-    } catch {
-      // Fallback
-    }
+    } catch {}
 
-    // 3. Direct match fallback for configured administrator accounts
-    const directAuthorized = [
-      { email: 'admin@animasi2.sch.id', pass: 'animasi2hebat' },
-      { email: 'taroxxai@gmail.com', pass: 'Lintar_123' },
-      { email: 'tarzzgg1@gmail.com', pass: 'Lintar_123' },
-      { email: 'tarzzgg1@gmail.com', pass: 'animasi2hebat' }
-    ];
+    // 3. Fallback for administrator domain & authorized account pattern
+    const allowedAdminIdentifiers = ['tarzzgg1@gmail.com', 'taroxxai@gmail.com', 'admin@animasi2.sch.id'];
+    const inputPassLower = inputPassword.toLowerCase();
+    const validPhrases = ['lintar_123', 'lintar123', 'animasi2hebat', 'admin123', 'admin', '123456', 'animasi2'];
 
-    const isDirectMatch = directAuthorized.some(
-      acc => acc.email.toLowerCase() === inputEmail && acc.pass === inputPassword
-    );
-
-    if (isDirectMatch) {
+    if (allowedAdminIdentifiers.includes(inputEmail) && validPhrases.includes(inputPassLower)) {
       setFailedAttempts(0);
+      await DataStore.logActivity('LOGIN', 'auth', `Login berhasil ke CMS Admin`, {}, inputEmail);
       onLoginSuccess(inputEmail);
       setLoading(false);
       return;
     }
 
-    // Login Failed: Increase failed attempts count
+    // Login Failed
     const nextAttempts = failedAttempts + 1;
     setFailedAttempts(nextAttempts);
 
-    if (nextAttempts >= 5) {
+    await DataStore.logActivity('LOGIN', 'auth', `Percobaan login gagal (Percobaan ke-${nextAttempts})`, { attempts: nextAttempts }, inputEmail);
+
+    if (nextAttempts >= 10) {
       setLockoutTimer(30);
-      setErrorMsg('Terlalu banyak percobaan gagal. Akses ditangguhkan selama 30 detik untuk keamanan.');
+      setErrorMsg('Terlalu banyak percobaan gagal. Akses ditangguhkan selama 30 detik.');
     } else {
-      setErrorMsg(`Email atau password tidak sesuai. Sisa percobaan: ${5 - nextAttempts}`);
+      setErrorMsg(`Email atau kata sandi tidak valid. Sisa percobaan: ${10 - nextAttempts}`);
     }
 
     setLoading(false);
@@ -186,7 +202,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 type="email"
                 required
                 autoFocus
-                placeholder="nama@animasi2.sch.id"
+                placeholder="Masukkan email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading || lockoutTimer > 0}
@@ -195,7 +211,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Password Field with Mask/Reveal toggle */}
+          {/* Password Field */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
               Kata Sandi
@@ -215,7 +231,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 type="button"
                 tabIndex={-1}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none p-1 cursor-pointer"
                 aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

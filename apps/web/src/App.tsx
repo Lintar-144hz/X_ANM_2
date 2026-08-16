@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { Organisasi } from './pages/Organisasi';
 import { Siswa } from './pages/Siswa';
 import { Piket } from './pages/Piket';
+import { Galeri } from './pages/Galeri';
 import { Konten } from './pages/Konten';
 import { KontenDetail } from './pages/KontenDetail';
 import { INITIAL_SITE_SETTINGS } from '@shared/mockData';
@@ -40,6 +41,7 @@ export default function App({ onSwitchToAdmin }: AppProps) {
         {currentPath === '/organisasi' && <Organisasi />}
         {currentPath === '/siswa' && <Siswa />}
         {currentPath === '/piket' && <Piket />}
+        {currentPath === '/galeri' && <Galeri />}
         {currentPath === '/konten' && !contentSlug && (
           <Konten onSelectContent={(slug) => handleNavigate('/konten', slug)} />
         )}

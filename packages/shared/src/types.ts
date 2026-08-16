@@ -71,7 +71,21 @@ export interface SiteSettings {
 export interface MediaFile {
   id: string;
   name: string;
+  description?: string;
+  category?: 'karya' | 'kegiatan' | 'prestasi' | 'dokumentasi' | 'umum';
   url: string;
   size?: number;
   created_at?: string;
+}
+
+export type ActivityActionType = 'LOGIN' | 'CREATE' | 'UPDATE' | 'DELETE' | 'SETTINGS';
+
+export interface ActivityLog {
+  id: string;
+  admin_email: string;
+  action_type: ActivityActionType;
+  target_table: 'students' | 'organization' | 'schedules' | 'contents' | 'media' | 'site_settings' | 'auth';
+  description: string;
+  metadata?: Record<string, any>;
+  created_at: string;
 }

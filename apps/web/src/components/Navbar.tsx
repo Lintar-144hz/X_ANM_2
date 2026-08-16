@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Users, Award, Calendar, Newspaper, Menu, X, Shield, ArrowUpRight } from 'lucide-react';
+import { Sparkles, Users, Award, Calendar, Newspaper, Menu, X, Shield, ArrowUpRight, Image as ImageIcon } from 'lucide-react';
 
 interface NavbarProps {
   currentPath: string;
@@ -26,6 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onSwitc
     { path: '/organisasi', label: 'Organisasi', icon: Award },
     { path: '/siswa', label: 'Siswa', icon: Users },
     { path: '/piket', label: 'Jadwal Piket', icon: Calendar },
+    { path: '/galeri', label: 'Media', icon: ImageIcon },
     { path: '/konten', label: 'Pengumuman', icon: Newspaper },
   ];
 

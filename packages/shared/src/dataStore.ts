@@ -5,14 +5,17 @@ import {
   ScheduleItem,
   ContentItem,
   SiteSettings,
-  MediaFile
+  MediaFile,
+  ActivityLog,
+  ActivityActionType
 } from './types';
 import {
   INITIAL_SITE_SETTINGS,
   INITIAL_STUDENTS,
   INITIAL_ORGANIZATION,
   INITIAL_SCHEDULES,
-  INITIAL_CONTENTS
+  INITIAL_CONTENTS,
+  INITIAL_MEDIA
 } from './mockData';
 
 // Helper to notify all UI components across Admin and Public apps to re-fetch
@@ -42,7 +45,8 @@ const LS_KEYS = {
   ORGANIZATION: 'x_animasi_organization',
   SCHEDULES: 'x_animasi_schedules',
   CONTENTS: 'x_animasi_contents',
-  MEDIA: 'x_animasi_media'
+  MEDIA: 'x_animasi_media',
+  LOGS: 'x_animasi_activity_logs'
 };
 
 function getLocalData<T>(key: string, defaultValue: T): T {
@@ -690,66 +694,173 @@ export const DataStore = {
   // === MEDIA FILES ===
   async getMediaFiles(): Promise<MediaFile[]> {
     const supabase = getSupabase();
-    if (!supabase) return getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
+    let mediaList: MediaFile[] = [];
 
-    try {
-      const { data, error } = await supabase.storage.from('class-media').list();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.storage.from('class-media').list();
+        if (!error && data && data.length > 0) {
+          const { data: { publicUrl } } = supabase.storage.from('class-media').getPublicUrl('');
+          const remoteMedia: MediaFile[] = data.map(item => ({
+            id: item.id || item.name,
+            name: item.name,
+            url: `${publicUrl}/${item.name}`,
+            size: item.metadata?.size,
+            created_at: item.created_at || new Date().toISOString()
+          }));
 
-      if (error) {
-        console.warn('Storage list info:', error.message);
-        return getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
+          const localMedia = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, INITIAL_MEDIA);
+          const combined: MediaFile[] = [...remoteMedia];
+          localMedia.forEach(lm => {
+            if (!combined.some(r => r.name === lm.name || r.url === lm.url)) {
+              combined.push(lm);
+            }
+          });
+          setLocalData(LS_KEYS.MEDIA, combined);
+          mediaList = combined;
+        }
+      } catch {
+        // Fallback to local data
       }
-
-      const { data: { publicUrl } } = supabase.storage.from('class-media').getPublicUrl('');
-      const remoteMedia = (data || []).map(item => ({
-        id: item.id || item.name,
-        name: item.name,
-        url: `${publicUrl}/${item.name}`,
-        size: item.metadata?.size,
-        created_at: item.created_at
-      }));
-
-      setLocalData(LS_KEYS.MEDIA, remoteMedia);
-      return remoteMedia;
-    } catch {
-      return getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
     }
+
+    if (mediaList.length === 0) {
+      mediaList = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, INITIAL_MEDIA);
+    }
+
+    // Always sort by upload/created date descending (newest first)
+    return mediaList.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
   },
 
-  async uploadMediaFile(file: File): Promise<MediaFile> {
+  async uploadMediaFile(
+    file: File,
+    options?: { description?: string; category?: MediaFile['category']; created_at?: string }
+  ): Promise<{ success: boolean; data?: MediaFile; message?: string }> {
     const localMedia = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+    const fileExt = file.name.split('.').pop() || 'png';
+    const cleanFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+    // Read as Base64 Data URL for guaranteed persistent display
+    const dataUrl: string = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(URL.createObjectURL(file));
+      reader.readAsDataURL(file);
+    });
 
     let newMedia: MediaFile = {
-      id: fileName,
+      id: cleanFileName,
       name: file.name,
-      url: URL.createObjectURL(file),
+      description: options?.description?.trim() || '',
+      category: options?.category || 'karya',
+      url: dataUrl,
       size: file.size,
-      created_at: new Date().toISOString()
+      created_at: options?.created_at || new Date().toISOString()
     };
 
     const supabase = getSupabase();
+    let uploadedToCloud = false;
+
     if (supabase) {
       try {
-        const { error } = await supabase.storage.from('class-media').upload(fileName, file);
-        if (!error) {
-          const { data: { publicUrl } } = supabase.storage.from('class-media').getPublicUrl(fileName);
-          newMedia.url = publicUrl;
+        const { data, error } = await supabase.storage.from('class-media').upload(cleanFileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+        if (!error && data) {
+          const { data: { publicUrl } } = supabase.storage.from('class-media').getPublicUrl(cleanFileName);
+          if (publicUrl) {
+            newMedia.url = publicUrl;
+            uploadedToCloud = true;
+          }
         }
       } catch (err: any) {
-        console.warn('uploadMediaFile Supabase note:', err?.message);
+        console.warn('Supabase storage upload note:', err?.message);
       }
     }
 
+    const updatedMedia = [newMedia, ...localMedia];
+    setLocalData(LS_KEYS.MEDIA, updatedMedia);
+
+    // Audit Log
+    await this.logActivity(
+      'CREATE',
+      'media',
+      `Mengunggah media: "${file.name}" (${(file.size / 1024).toFixed(1)} KB)${uploadedToCloud ? ' ke Supabase Storage' : ' ke Penyimpanan Lokal'}`,
+      { filename: cleanFileName, size: file.size, cloud: uploadedToCloud, description: newMedia.description }
+    );
+
+    notifyDataChanged();
+    return {
+      success: true,
+      data: newMedia,
+      message: uploadedToCloud ? 'Berhasil diunggah ke Supabase Storage!' : 'Berhasil disimpan ke galeri media lokal.'
+    };
+  },
+
+  async addMediaByUrl(
+    name: string,
+    url: string,
+    options?: { description?: string; category?: MediaFile['category']; created_at?: string }
+  ): Promise<MediaFile> {
+    const localMedia = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
+    const newMedia: MediaFile = {
+      id: 'url-' + Date.now(),
+      name: name.trim() || 'Media External',
+      description: options?.description?.trim() || '',
+      category: options?.category || 'karya',
+      url: url.trim(),
+      created_at: options?.created_at || new Date().toISOString()
+    };
+
     setLocalData(LS_KEYS.MEDIA, [newMedia, ...localMedia]);
+
+    await this.logActivity(
+      'CREATE',
+      'media',
+      `Menambahkan media via URL: "${newMedia.name}"`,
+      { url: newMedia.url, description: newMedia.description }
+    );
+
     notifyDataChanged();
     return newMedia;
+  },
+
+  async updateMediaInfo(
+    id: string,
+    updates: Partial<Pick<MediaFile, 'name' | 'description' | 'category' | 'created_at'>>
+  ): Promise<MediaFile | null> {
+    const localMedia = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
+    const idx = localMedia.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+
+    const updated = {
+      ...localMedia[idx],
+      ...updates
+    };
+    localMedia[idx] = updated;
+    setLocalData(LS_KEYS.MEDIA, localMedia);
+
+    await this.logActivity(
+      'UPDATE',
+      'media',
+      `Memperbarui informasi media: "${updated.name}"`,
+      { id, ...updates }
+    );
+
+    notifyDataChanged();
+    return updated;
   },
 
   async deleteMediaFile(id: string, name?: string): Promise<boolean> {
     const localMedia = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, []);
     const targetName = name || id;
+    const target = localMedia.find(m => m.id === id || m.name === targetName);
     const updatedMedia = localMedia.filter(m => m.id !== id && m.name !== targetName);
     setLocalData(LS_KEYS.MEDIA, updatedMedia);
 
@@ -761,6 +872,13 @@ export const DataStore = {
         console.warn('deleteMediaFile Supabase note:', err?.message);
       }
     }
+
+    await this.logActivity(
+      'DELETE',
+      'media',
+      `Menghapus berkas media: "${target?.name || targetName}"`,
+      { id, name: targetName }
+    );
 
     notifyDataChanged();
     return true;
@@ -918,5 +1036,94 @@ export const DataStore = {
         message: `Gagal sinkronisasi data: ${err?.message || 'Terjadi kesalahan'}`
       };
     }
+  },
+
+  // === ACTIVITY & AUDIT LOGS ===
+  async logActivity(
+    action_type: ActivityActionType,
+    target_table: ActivityLog['target_table'],
+    description: string,
+    metadata?: Record<string, any>,
+    admin_email?: string
+  ): Promise<void> {
+    let email = admin_email;
+    if (!email && typeof window !== 'undefined') {
+      try {
+        email = sessionStorage.getItem('x_animasi_secure_session') || undefined;
+      } catch {}
+    }
+    if (!email) {
+      email = 'admin@animasi2.sch.id';
+    }
+
+    const newLog: ActivityLog = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      admin_email: email,
+      action_type,
+      target_table,
+      description,
+      metadata: metadata || {},
+      created_at: new Date().toISOString()
+    };
+
+    const currentLogs = getLocalData<ActivityLog[]>(LS_KEYS.LOGS, []);
+    const updatedLogs = [newLog, ...currentLogs.slice(0, 199)];
+    setLocalData(LS_KEYS.LOGS, updatedLogs);
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('activity_logs').insert([newLog]);
+      } catch (err) {
+        // Table might not exist yet on Supabase, fallback to local is transparent and safe
+      }
+    }
+
+    notifyDataChanged();
+  },
+
+  async getActivityLogs(limit = 100, offset = 0): Promise<{ data: ActivityLog[]; total: number }> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, count, error } = await supabase
+          .from('activity_logs')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        if (!error && data && data.length > 0) {
+          return { data, total: count || data.length };
+        }
+      } catch {}
+    }
+
+    let logs = getLocalData<ActivityLog[]>(LS_KEYS.LOGS, []);
+    if (logs.length === 0) {
+      logs = [
+        {
+          id: 'init-log-1',
+          admin_email: 'admin@animasi2.sch.id',
+          action_type: 'LOGIN',
+          target_table: 'auth',
+          description: 'Administrator masuk ke panel CMS X ANIMASI 2',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 'init-log-2',
+          admin_email: 'admin@animasi2.sch.id',
+          action_type: 'UPDATE',
+          target_table: 'organization',
+          description: 'Sinkronisasi struktur organisasi & pengurus kelas',
+          created_at: new Date(Date.now() - 3600000).toISOString()
+        }
+      ];
+      setLocalData(LS_KEYS.LOGS, logs);
+    }
+
+    return {
+      data: logs.slice(offset, offset + limit),
+      total: logs.length
+    };
   }
 };

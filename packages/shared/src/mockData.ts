@@ -1,4 +1,4 @@
-import { Student, OrganizationMember, ScheduleItem, ContentItem, SiteSettings } from './types';
+import { Student, OrganizationMember, ScheduleItem, ContentItem, SiteSettings, MediaFile } from './types';
 
 export const INITIAL_SITE_SETTINGS: SiteSettings = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -61,3 +61,43 @@ export const INITIAL_CONTENTS: ContentItem[] = [
     published_at: '2026-08-01T10:15:00.000Z'
   }
 ];
+
+export const INITIAL_MEDIA: MediaFile[] = [
+  {
+    id: 'med-01',
+    name: 'Short Animation Project 2D - Scene 01',
+    description: 'Proyek tugas akhir animasi 2D semester genap, eksplorasi konsep background layout dan lighting suasana studio malam.',
+    category: 'karya',
+    url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80',
+    size: 2450000,
+    created_at: '2026-08-14T08:30:00.000Z'
+  },
+  {
+    id: 'med-02',
+    name: 'Character Model Sheet - Cyber Fox',
+    description: 'Desain karakter digital concept art untuk maskot animasi kelas X ANIMASI 2.',
+    category: 'karya',
+    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
+    size: 1850000,
+    created_at: '2026-08-11T14:15:00.000Z'
+  },
+  {
+    id: 'med-03',
+    name: 'Dokumentasi Workshop Drawing Tablet Studio',
+    description: 'Sesi latihan pembuatan storyboard dan digital inking bersama siswa di laboratorium animasi.',
+    category: 'kegiatan',
+    url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=1200&auto=format&fit=crop&q=80',
+    size: 3200000,
+    created_at: '2026-08-08T10:00:00.000Z'
+  },
+  {
+    id: 'med-04',
+    name: 'Juara 1 Lomba Animasi Pendek FLS2N',
+    description: 'Dokumentasi penyerahan trofi dan piagam penghargaan kejuaraan animasi tingkat kota.',
+    category: 'prestasi',
+    url: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=1200&auto=format&fit=crop&q=80',
+    size: 2100000,
+    created_at: '2026-08-02T16:45:00.000Z'
+  }
+];
+
