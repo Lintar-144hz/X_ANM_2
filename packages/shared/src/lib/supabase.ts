@@ -1,27 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// Default Supabase project configuration (active for all users & apps)
+export const DEFAULT_SUPABASE_URL = 'https://xdptlclwxrcmzalhxtvh.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkcHRsY2x3eHJjbXphbGh4dHZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MDQwOTgsImV4cCI6MjEwMjE4MDA5OH0.7SX4u0LwAQh4eRQzyYVzlckqO_j36WTKQ8R6FGX1Jls';
+
 // Environment variables from root .env or Vite environment
-const ENV_SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
-const ENV_SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
+const ENV_SUPABASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+const ENV_SUPABASE_ANON_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_ANON_KEY;
 
 /**
  * Retrieve current Supabase credentials from environment or runtime storage.
  */
 export function getSupabaseCredentials() {
-  const localUrl = typeof window !== 'undefined' 
-    ? (localStorage.getItem('X_ANIMASI_SUPABASE_URL') || localStorage.getItem('x_animasi_supabase_url') || '') 
-    : '';
-  const localKey = typeof window !== 'undefined' 
-    ? (localStorage.getItem('X_ANIMASI_SUPABASE_ANON_KEY') || localStorage.getItem('x_animasi_supabase_key') || '') 
-    : '';
+  const localUrl =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('X_ANIMASI_SUPABASE_URL') ||
+        localStorage.getItem('x_animasi_supabase_url') ||
+        ''
+      : '';
+  const localKey =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('X_ANIMASI_SUPABASE_ANON_KEY') ||
+        localStorage.getItem('x_animasi_supabase_key') ||
+        ''
+      : '';
 
-  const url = (localUrl || ENV_SUPABASE_URL || '').trim();
-  const key = (localKey || ENV_SUPABASE_ANON_KEY || '').trim();
+  const url = (localUrl || ENV_SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
+  const key = (localKey || ENV_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim();
 
   const isConfigured = Boolean(
-    url && 
-    key && 
-    !url.includes('YOUR_SUPABASE_URL') && 
+    url &&
+    key &&
+    !url.includes('YOUR_SUPABASE_URL') &&
     !url.includes('your-supabase-project') &&
     !url.includes('example.supabase.co') &&
     !key.includes('your-supabase-anon-key') &&
@@ -130,7 +143,7 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealthResult> {
         return {
           ok: true,
           status: 'active',
-          message: 'Terhubung ke Supabase (Skema tabel belum dimigrasi).',
+          message: 'Terhubung ke Supabase (Tabel database belum dibuat / perlu Run SQL).',
           latencyMs,
           timestamp: Date.now()
         };
@@ -148,7 +161,7 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealthResult> {
     return {
       ok: true,
       status: 'active',
-      message: 'Koneksi Supabase aktif & stabil.',
+      message: 'Koneksi Supabase aktif & tersinkronisasi.',
       latencyMs,
       timestamp: Date.now()
     };
@@ -166,8 +179,8 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealthResult> {
 
 // Fallback client to prevent undefined errors when unconfigured
 const fallbackClient = createClient(
-  'https://placeholder.supabase.co',
-  'placeholder-anon-key',
+  DEFAULT_SUPABASE_URL,
+  DEFAULT_SUPABASE_ANON_KEY,
   CLIENT_OPTIONS
 );
 

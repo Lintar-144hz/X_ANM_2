@@ -786,5 +786,159 @@ export const DataStore = {
 
     notifyDataChanged();
     return true;
+  },
+
+  // === SYNC LOCAL DATA TO SUPABASE CLOUD ===
+  async syncAllLocalDataToSupabase(): Promise<{
+    success: boolean;
+    message: string;
+    details?: {
+      settings: boolean;
+      students: number;
+      organization: number;
+      schedules: number;
+      contents: number;
+    };
+  }> {
+    const supabase = getSupabase();
+    if (!supabase) {
+      return {
+        success: false,
+        message: 'Koneksi Supabase belum aktif atau URL/Key belum terpasang.'
+      };
+    }
+
+    try {
+      // 1. Sync Settings
+      const localSettings = getLocalData<SiteSettings>(LS_KEYS.SETTINGS, INITIAL_SITE_SETTINGS);
+      const { error: setErr } = await supabase.from('site_settings').upsert({
+        id: localSettings.id || 'default_class_profile',
+        class_name: localSettings.class_name,
+        hero_title: localSettings.hero_title,
+        hero_subtitle: localSettings.hero_subtitle,
+        description: localSettings.description,
+        hero_image_url: localSettings.hero_image_url,
+        footer_text: localSettings.footer_text,
+        updated_at: new Date().toISOString()
+      });
+
+      if (setErr && isTableMissingError(setErr)) {
+        return {
+          success: false,
+          message: 'Tabel database belum dibuat di Supabase. Silakan jalankan script SQL di SQL Editor Supabase terlebih dahulu.'
+        };
+      }
+
+      // 2. Sync Students
+      const localStudents = getLocalData<Student[]>(LS_KEYS.STUDENTS, INITIAL_STUDENTS);
+      if (localStudents.length > 0) {
+        for (const st of localStudents) {
+          const studentPayload: any = {
+            name: st.name,
+            attendance_number: Number(st.attendance_number),
+            gender: st.gender,
+            photo_url: st.photo_url || null,
+            updated_at: new Date().toISOString()
+          };
+          if (st.id && !st.id.startsWith('std-')) {
+            studentPayload.id = st.id;
+          }
+          await supabase.from('students').upsert(studentPayload);
+        }
+      }
+
+      // Fetch freshly synced students to map IDs for schedules and organization
+      const { data: remoteStudents } = await supabase
+        .from('students')
+        .select('*')
+        .order('attendance_number', { ascending: true });
+
+      const studentMapByName = new Map<string, string>();
+      const studentMapByNumber = new Map<number, string>();
+      (remoteStudents || []).forEach(s => {
+        studentMapByName.set(s.name.toLowerCase().trim(), s.id);
+        studentMapByNumber.set(s.attendance_number, s.id);
+      });
+
+      // 3. Sync Organization
+      const localOrg = getLocalData<OrganizationMember[]>(LS_KEYS.ORGANIZATION, INITIAL_ORGANIZATION);
+      if (localOrg.length > 0) {
+        await supabase.from('organization').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        const orgPayload = localOrg.map(m => {
+          let sId: string | null = null;
+          if (m.student_id && !m.student_id.startsWith('std-')) {
+            sId = m.student_id;
+          } else if (m.student?.name) {
+            sId = studentMapByName.get(m.student.name.toLowerCase().trim()) || null;
+          }
+          return {
+            position: m.position,
+            student_id: sId,
+            custom_name: m.custom_name || null,
+            order_index: m.order_index
+          };
+        });
+        await supabase.from('organization').insert(orgPayload);
+      }
+
+      // 4. Sync Schedules
+      const localSchedules = getLocalData<ScheduleItem[]>(LS_KEYS.SCHEDULES, INITIAL_SCHEDULES);
+      if (localSchedules.length > 0) {
+        await supabase.from('schedules').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        const schPayload: any[] = [];
+        localSchedules.forEach(sc => {
+          let sId = sc.student_id;
+          if (sId.startsWith('std-') && sc.student?.name) {
+            sId = studentMapByName.get(sc.student.name.toLowerCase().trim()) || sId;
+          }
+          schPayload.push({
+            day: sc.day,
+            student_id: sId,
+            order_index: sc.order_index
+          });
+        });
+        if (schPayload.length > 0) {
+          await supabase.from('schedules').insert(schPayload);
+        }
+      }
+
+      // 5. Sync Contents
+      const localContents = getLocalData<ContentItem[]>(LS_KEYS.CONTENTS, INITIAL_CONTENTS);
+      if (localContents.length > 0) {
+        for (const c of localContents) {
+          const contentPayload: any = {
+            title: c.title,
+            slug: c.slug,
+            body: c.body,
+            image_url: c.image_url || null,
+            status: c.status || 'published',
+            published_at: c.published_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          if (c.id && !c.id.startsWith('cnt-')) {
+            contentPayload.id = c.id;
+          }
+          await supabase.from('contents').upsert(contentPayload, { onConflict: 'slug' });
+        }
+      }
+
+      notifyDataChanged();
+      return {
+        success: true,
+        message: 'Semua data dari HP/perangkat ini berhasil disinkronkan ke Supabase Cloud!',
+        details: {
+          settings: true,
+          students: localStudents.length,
+          organization: localOrg.length,
+          schedules: localSchedules.length,
+          contents: localContents.length
+        }
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Gagal sinkronisasi data: ${err?.message || 'Terjadi kesalahan'}`
+      };
+    }
   }
 };

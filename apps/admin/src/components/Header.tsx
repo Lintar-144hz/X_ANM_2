@@ -276,6 +276,28 @@ export const Header: React.FC<HeaderProps> = ({ title, userEmail, onToggleMobile
               </p>
             </div>
 
+            {/* Quick Upload Local Data Button */}
+            <div className="p-3.5 bg-gradient-to-r from-cyan-950/60 to-slate-950 border border-cyan-900/50 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-cyan-300">Sinkronkan Data Offline HP ke Cloud</h4>
+                  <p className="text-[11px] text-slate-400">Unggah semua data yang pernah diinput di HP ini agar langsung muncul di HP teman.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const res = await (await import('@shared/dataStore')).DataStore.syncAllLocalDataToSupabase();
+                  alert(res.message);
+                  runHealthCheck();
+                }}
+                className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Database className="w-3.5 h-3.5" />
+                Upload & Sinkronkan Sekarang
+              </button>
+            </div>
+
             {/* SQL Script Quick Copy */}
             <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
               <span className="text-slate-300 font-medium">Butuh script skema tabel Supabase?</span>
