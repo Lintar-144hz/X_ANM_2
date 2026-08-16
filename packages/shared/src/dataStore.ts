@@ -121,8 +121,18 @@ export const DataStore = {
         return result;
       }
 
-      setLocalData(LS_KEYS.SETTINGS, data[0]);
-      return data[0];
+      const loaded = data[0];
+      if (loaded.description && loaded.description.includes('SMKN 1 Indonesia')) {
+        loaded.description = loaded.description.replace(/SMKN 1 Indonesia/g, 'SMKN 9 Surakarta');
+      }
+      if (loaded.hero_subtitle && loaded.hero_subtitle.includes('SMKN 1 Indonesia')) {
+        loaded.hero_subtitle = loaded.hero_subtitle.replace(/SMKN 1 Indonesia/g, 'SMKN 9 Surakarta');
+      }
+      if (loaded.footer_text && loaded.footer_text.includes('SMKN 1 Indonesia')) {
+        loaded.footer_text = loaded.footer_text.replace(/SMKN 1 Indonesia/g, 'SMKN 9 Surakarta');
+      }
+      setLocalData(LS_KEYS.SETTINGS, loaded);
+      return loaded;
     } catch (err: any) {
       console.warn('getSettings exception:', err?.message);
       return getLocalData(LS_KEYS.SETTINGS, INITIAL_SITE_SETTINGS);
@@ -184,25 +194,14 @@ export const DataStore = {
         return getLocalData(LS_KEYS.STUDENTS, INITIAL_STUDENTS);
       }
 
+      // If Supabase table is empty, do NOT auto-seed dummy students if user has deliberately deleted or has real local data
       if (!data || data.length === 0) {
-        // Auto-seed initial students if table is empty
-        const payload = INITIAL_STUDENTS.map(s => ({
-          name: s.name,
-          attendance_number: s.attendance_number,
-          gender: s.gender,
-          photo_url: s.photo_url || null
-        }));
-
-        await supabase.from('students').insert(payload);
-
-        const { data: reData } = await supabase
-          .from('students')
-          .select('*')
-          .order('attendance_number', { ascending: true });
-
-        const result = (reData && reData.length > 0) ? reData : INITIAL_STUDENTS;
-        setLocalData(LS_KEYS.STUDENTS, result);
-        return result;
+        const localList = getLocalData<Student[]>(LS_KEYS.STUDENTS, []);
+        if (localList.length > 0) {
+          // Sync existing local students up
+          return localList;
+        }
+        return [];
       }
 
       setLocalData(LS_KEYS.STUDENTS, data);
@@ -251,7 +250,7 @@ export const DataStore = {
       }
     }
 
-    const updatedList = [...localList.filter(s => s.id !== savedStudent.id), savedStudent].sort(
+    const updatedList = [...localList.filter(s => s.id !== savedStudent.id && s.attendance_number !== savedStudent.attendance_number), savedStudent].sort(
       (a, b) => a.attendance_number - b.attendance_number
     );
     setLocalData(LS_KEYS.STUDENTS, updatedList);
@@ -262,14 +261,14 @@ export const DataStore = {
 
   async updateStudent(id: string, student: Partial<Student>): Promise<Student> {
     const localList = getLocalData<Student[]>(LS_KEYS.STUDENTS, INITIAL_STUDENTS);
-    const existing = localList.find(s => s.id === id);
+    const existing = localList.find(s => s.id === id || s.attendance_number === student.attendance_number);
     const updatedStudent: Student = {
       ...existing,
-      id,
+      id: existing?.id || id,
       name: student.name ?? existing?.name ?? '',
       attendance_number: student.attendance_number ?? existing?.attendance_number ?? 1,
       gender: student.gender ?? existing?.gender ?? 'L',
-      photo_url: student.photo_url ?? existing?.photo_url,
+      photo_url: student.photo_url !== undefined ? student.photo_url : existing?.photo_url,
       updated_at: new Date().toISOString()
     };
 
@@ -278,15 +277,22 @@ export const DataStore = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('students')
-          .update({
-            ...student,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select()
-          .single();
+        let updateQuery = supabase.from('students').update({
+          name: updatedStudent.name,
+          attendance_number: updatedStudent.attendance_number,
+          gender: updatedStudent.gender,
+          photo_url: updatedStudent.photo_url || null,
+          updated_at: new Date().toISOString()
+        });
+
+        if (id.startsWith('std-')) {
+          // If local ID format, match by attendance_number or name
+          updateQuery = updateQuery.eq('attendance_number', updatedStudent.attendance_number);
+        } else {
+          updateQuery = updateQuery.eq('id', id);
+        }
+
+        const { data, error } = await updateQuery.select().single();
 
         if (error) {
           console.warn('Supabase updateStudent note:', error.message);
@@ -298,7 +304,12 @@ export const DataStore = {
       }
     }
 
-    const updatedList = localList.map(s => (s.id === id ? savedStudent : s)).sort(
+    const updatedList = localList.map(s => {
+      if (s.id === id || (s.id === existing?.id)) {
+        return savedStudent;
+      }
+      return s;
+    }).sort(
       (a, b) => a.attendance_number - b.attendance_number
     );
     setLocalData(LS_KEYS.STUDENTS, updatedList);
@@ -309,13 +320,20 @@ export const DataStore = {
 
   async deleteStudent(id: string): Promise<boolean> {
     const localList = getLocalData<Student[]>(LS_KEYS.STUDENTS, INITIAL_STUDENTS);
+    const targetStudent = localList.find(s => s.id === id);
     const updatedList = localList.filter(s => s.id !== id);
     setLocalData(LS_KEYS.STUDENTS, updatedList);
 
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { error } = await supabase.from('students').delete().eq('id', id);
+        let deleteQuery = supabase.from('students').delete();
+        if (id.startsWith('std-') && targetStudent) {
+          deleteQuery = deleteQuery.eq('attendance_number', targetStudent.attendance_number);
+        } else {
+          deleteQuery = deleteQuery.eq('id', id);
+        }
+        const { error } = await deleteQuery;
         if (error) {
           console.warn('Supabase deleteStudent note:', error.message);
         }
@@ -356,32 +374,12 @@ export const DataStore = {
       }
 
       if (!data || data.length === 0) {
-        if (students.length >= 5) {
-          const seedOrg = [
-            { position: 'Wali Kelas', student_id: students[9]?.id || students[0]?.id, order_index: 1 },
-            { position: 'Ketua', student_id: students[0]?.id, order_index: 2 },
-            { position: 'Wakil Ketua', student_id: students[1]?.id, order_index: 3 },
-            { position: 'Sekretaris', student_id: students[3]?.id, order_index: 4 },
-            { position: 'Bendahara', student_id: students[5]?.id, order_index: 5 }
-          ];
-          await supabase.from('organization').insert(seedOrg);
-
-          const { data: reData } = await supabase
-            .from('organization')
-            .select('*, student:students(*)')
-            .order('order_index', { ascending: true });
-
-          if (reData && reData.length > 0) {
-            setLocalData(LS_KEYS.ORGANIZATION, reData);
-            return reData;
-          }
-        }
         const localOrg = getLocalData<OrganizationMember[]>(LS_KEYS.ORGANIZATION, INITIAL_ORGANIZATION);
         return localOrg.map(m => attachStudentToOrg(m, studentMap));
       }
 
       setLocalData(LS_KEYS.ORGANIZATION, data);
-      return data;
+      return data.map(m => attachStudentToOrg(m, studentMap));
     } catch (err: any) {
       console.warn('getOrganization exception:', err?.message);
       const localOrg = getLocalData<OrganizationMember[]>(LS_KEYS.ORGANIZATION, INITIAL_ORGANIZATION);
@@ -419,7 +417,7 @@ export const DataStore = {
         const { error } = await supabase
           .from('organization')
           .upsert(
-            { position, student_id: studentId || null, custom_name: customName || null },
+            { position, student_id: studentId || null, custom_name: customName || null, order_index: existingIndex >= 0 ? localOrg[existingIndex].order_index : localOrg.length },
             { onConflict: 'position' }
           );
 
@@ -462,33 +460,12 @@ export const DataStore = {
       }
 
       if (!data || data.length === 0) {
-        if (students.length >= 6) {
-          const seedSchedules = [
-            { day: 'Senin', student_id: students[0]?.id, order_index: 1 },
-            { day: 'Senin', student_id: students[1]?.id, order_index: 2 },
-            { day: 'Selasa', student_id: students[2]?.id, order_index: 1 },
-            { day: 'Selasa', student_id: students[3]?.id, order_index: 2 },
-            { day: 'Rabu', student_id: students[4]?.id, order_index: 1 },
-            { day: 'Rabu', student_id: students[5]?.id, order_index: 2 }
-          ];
-          await supabase.from('schedules').insert(seedSchedules);
-
-          const { data: reData } = await supabase
-            .from('schedules')
-            .select('*, student:students(*)')
-            .order('order_index', { ascending: true });
-
-          if (reData && reData.length > 0) {
-            setLocalData(LS_KEYS.SCHEDULES, reData);
-            return reData;
-          }
-        }
         const localSch = getLocalData<ScheduleItem[]>(LS_KEYS.SCHEDULES, INITIAL_SCHEDULES);
         return localSch.map(s => attachStudentToSchedule(s, studentMap));
       }
 
       setLocalData(LS_KEYS.SCHEDULES, data);
-      return data;
+      return data.map(s => attachStudentToSchedule(s, studentMap));
     } catch (err: any) {
       console.warn('getSchedules exception:', err?.message);
       const localSch = getLocalData<ScheduleItem[]>(LS_KEYS.SCHEDULES, INITIAL_SCHEDULES);
@@ -557,25 +534,11 @@ export const DataStore = {
       }
 
       if (!data || data.length === 0) {
-        const payload = INITIAL_CONTENTS.map(c => ({
-          title: c.title,
-          slug: c.slug,
-          body: c.body,
-          image_url: c.image_url || null,
-          status: c.status,
-          published_at: c.published_at || new Date().toISOString()
-        }));
-
-        await supabase.from('contents').insert(payload);
-
-        let reQuery = supabase.from('contents').select('*').order('created_at', { ascending: false });
-        if (onlyPublished) {
-          reQuery = reQuery.eq('status', 'published');
+        const localContents = getLocalData<ContentItem[]>(LS_KEYS.CONTENTS, []);
+        if (localContents.length > 0) {
+          return onlyPublished ? localContents.filter(c => c.status === 'published') : localContents;
         }
-        const { data: reData } = await reQuery;
-        const result = (reData && reData.length > 0) ? reData : INITIAL_CONTENTS;
-        setLocalData(LS_KEYS.CONTENTS, result);
-        return onlyPublished ? result.filter(c => c.status === 'published') : result;
+        return [];
       }
 
       setLocalData(LS_KEYS.CONTENTS, data);
@@ -634,7 +597,7 @@ export const DataStore = {
       }
     }
 
-    const updatedList = [savedContent, ...localList.filter(c => c.id !== savedContent.id)];
+    const updatedList = [savedContent, ...localList.filter(c => c.id !== savedContent.id && c.slug !== savedContent.slug)];
     setLocalData(LS_KEYS.CONTENTS, updatedList);
 
     notifyDataChanged();
@@ -643,14 +606,14 @@ export const DataStore = {
 
   async updateContent(id: string, content: Partial<ContentItem>): Promise<ContentItem> {
     const localList = getLocalData<ContentItem[]>(LS_KEYS.CONTENTS, INITIAL_CONTENTS);
-    const existing = localList.find(c => c.id === id);
+    const existing = localList.find(c => c.id === id || (content.slug && c.slug === content.slug));
     const updatedContent: ContentItem = {
       ...existing,
-      id,
+      id: existing?.id || id,
       title: content.title ?? existing?.title ?? '',
       slug: content.slug ?? existing?.slug ?? '',
       body: content.body ?? existing?.body ?? '',
-      image_url: content.image_url ?? existing?.image_url,
+      image_url: content.image_url !== undefined ? content.image_url : existing?.image_url,
       status: content.status ?? existing?.status ?? 'published',
       published_at: content.status === 'published' ? (existing?.published_at || new Date().toISOString()) : undefined,
       updated_at: new Date().toISOString()
@@ -661,15 +624,23 @@ export const DataStore = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('contents')
-          .update({
-            ...content,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select()
-          .single();
+        let updateQuery = supabase.from('contents').update({
+          title: updatedContent.title,
+          slug: updatedContent.slug,
+          body: updatedContent.body,
+          image_url: updatedContent.image_url || null,
+          status: updatedContent.status,
+          published_at: updatedContent.published_at || null,
+          updated_at: new Date().toISOString()
+        });
+
+        if (id.startsWith('cnt-')) {
+          updateQuery = updateQuery.eq('slug', updatedContent.slug);
+        } else {
+          updateQuery = updateQuery.eq('id', id);
+        }
+
+        const { data, error } = await updateQuery.select().single();
 
         if (error) {
           console.warn('Supabase updateContent note:', error.message);
@@ -681,7 +652,7 @@ export const DataStore = {
       }
     }
 
-    const updatedList = localList.map(c => (c.id === id ? savedContent : c));
+    const updatedList = localList.map(c => (c.id === id || c.id === existing?.id ? savedContent : c));
     setLocalData(LS_KEYS.CONTENTS, updatedList);
 
     notifyDataChanged();
@@ -690,13 +661,20 @@ export const DataStore = {
 
   async deleteContent(id: string): Promise<boolean> {
     const localList = getLocalData<ContentItem[]>(LS_KEYS.CONTENTS, INITIAL_CONTENTS);
+    const targetItem = localList.find(c => c.id === id);
     const updatedList = localList.filter(c => c.id !== id);
     setLocalData(LS_KEYS.CONTENTS, updatedList);
 
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { error } = await supabase.from('contents').delete().eq('id', id);
+        let deleteQuery = supabase.from('contents').delete();
+        if (id.startsWith('cnt-') && targetItem?.slug) {
+          deleteQuery = deleteQuery.eq('slug', targetItem.slug);
+        } else {
+          deleteQuery = deleteQuery.eq('id', id);
+        }
+        const { error } = await deleteQuery;
         if (error) {
           console.warn('Supabase deleteContent note:', error.message);
         }

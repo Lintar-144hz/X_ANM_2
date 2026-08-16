@@ -3,11 +3,11 @@ import { Student, OrganizationMember, ScheduleItem, ContentItem, SiteSettings } 
 export const INITIAL_SITE_SETTINGS: SiteSettings = {
   id: '00000000-0000-0000-0000-000000000001',
   class_name: 'X ANIMASI 2',
-  description: 'Komunitas kreatif animator muda SMKN 1 Indonesia. Memadukan seni visual 2D/3D, sinematografi digital, dan passion tanpa batas.',
+  description: 'Komunitas kreatif animator muda SMKN 9 Surakarta. Memadukan seni visual 2D/3D, sinematografi digital, dan passion tanpa batas.',
   hero_title: 'Menciptakan Imajinasi Tanpa Batas',
-  hero_subtitle: 'Website Resmi X ANIMASI 2 — Portofolio, Informasi Kelas, Organisasi, dan Jadwal Kegiatan Pembelajaran 2026/2027.',
+  hero_subtitle: 'Website Resmi X ANIMASI 2 SMKN 9 Surakarta — Portofolio, Informasi Kelas, Organisasi, dan Jadwal Kegiatan Pembelajaran 2026/2027.',
   hero_image_url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80',
-  footer_text: '© 2026 X ANIMASI 2. Designed with Apple-inspired elegance for future animators.'
+  footer_text: '© 2026 X ANIMASI 2 SMKN 9 Surakarta. Designed with Apple-inspired elegance for future animators.'
 };
 
 export const INITIAL_STUDENTS: Student[] = Array.from({ length: 36 }, (_, i) => ({
@@ -18,7 +18,7 @@ export const INITIAL_STUDENTS: Student[] = Array.from({ length: 36 }, (_, i) => 
 }));
 
 export const INITIAL_ORGANIZATION: OrganizationMember[] = [
-  { id: 'org-01', position: 'Wali Kelas', student_id: '', order_index: 1 },
+  { id: 'org-01', position: 'Wali Kelas', student_id: '', custom_name: 'Wali Kelas X Animasi 2', order_index: 1 },
   { id: 'org-02', position: 'Ketua', student_id: '', order_index: 2 },
   { id: 'org-03', position: 'Wakil Ketua', student_id: '', order_index: 3 },
   { id: 'org-04', position: 'Sekretaris', student_id: '', order_index: 4 },
@@ -27,6 +27,7 @@ export const INITIAL_ORGANIZATION: OrganizationMember[] = [
   { id: 'org-07', position: 'Bumas 2', student_id: '', order_index: 7 },
   { id: 'org-08', position: 'MPK 1', student_id: '', order_index: 8 },
   { id: 'org-09', position: 'MPK 2', student_id: '', order_index: 9 },
+  { id: 'org-10', position: 'MPK 3', student_id: '', order_index: 10 },
 ];
 
 export const INITIAL_SCHEDULES: ScheduleItem[] = [];

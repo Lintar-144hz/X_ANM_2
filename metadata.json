@@ -1,6 +1,6 @@
 {
   "name": "X ANIMASI 2 - Website & Management System",
-  "description": "Website resmi dan Admin Dashboard CMS untuk kelas X ANIMASI 2",
+  "description": "Portal Resmi dan CMS Kelas X ANIMASI 2 SMKN 9 Surakarta.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

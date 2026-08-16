@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Login } from './pages/Login';
@@ -14,18 +14,33 @@ interface AdminAppProps {
   onSwitchToPublic?: () => void;
 }
 
+const SESSION_KEY = 'x_animasi_secure_session';
+
 export default function App({ onSwitchToPublic }: AdminAppProps) {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(SESSION_KEY);
+    } catch {
+      return null;
+    }
+  });
+
   const [currentRoute, setCurrentRoute] = useState('/dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleLoginSuccess = (email: string) => {
     setUserEmail(email);
+    try {
+      sessionStorage.setItem(SESSION_KEY, email);
+    } catch {}
     setCurrentRoute('/dashboard');
   };
 
   const handleLogout = () => {
     setUserEmail(null);
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {}
   };
 
   if (!userEmail) {
@@ -75,4 +90,3 @@ export default function App({ onSwitchToPublic }: AdminAppProps) {
     </div>
   );
 }
-

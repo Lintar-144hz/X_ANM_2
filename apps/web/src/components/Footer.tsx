@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ settings, onNavigate }) => {
           </div>
           <div>
             <h3 className="text-slate-950 font-extrabold text-sm tracking-tight">{settings.class_name || 'X ANIMASI 2'}</h3>
-            <p className="text-xs text-slate-500 font-medium">SMKN 1 Indonesia — Animasi & Multimedia Digital</p>
+            <p className="text-xs text-slate-500 font-medium">SMKN 9 Surakarta — Animasi & Multimedia Digital</p>
           </div>
         </div>
 

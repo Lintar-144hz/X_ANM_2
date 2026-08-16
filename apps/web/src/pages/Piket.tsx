@@ -43,10 +43,6 @@ export const Piket: React.FC = () => {
           <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-slate-950">
             Jadwal Piket Harian
           </h1>
-
-          <p className="text-slate-700 font-medium text-sm sm:text-base max-w-xl mx-auto">
-            Tugas piket harian siswa X ANIMASI 2 untuk menjaga kebersihan ruang teori dan laboratorium studio animasi.
-          </p>
         </div>
 
         {/* Day Tabs */}

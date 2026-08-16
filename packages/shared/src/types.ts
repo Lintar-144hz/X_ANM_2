@@ -17,7 +17,8 @@ export type ClassPosition =
   | 'Bumas 1'
   | 'Bumas 2'
   | 'MPK 1'
-  | 'MPK 2';
+  | 'MPK 2'
+  | 'MPK 3';
 
 export interface OrganizationMember {
   id: string;

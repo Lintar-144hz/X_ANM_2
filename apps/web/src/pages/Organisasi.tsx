@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { DataStore } from '@shared/dataStore';
 import { OrganizationMember, ClassPosition, Student, SiteSettings } from '@shared/types';
-import { Crown, Zap, Users, Award, Shield, User, Sparkles, CheckCircle2, Check } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Crown, Zap, Users, Award, Shield, User, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { ScrollReveal } from '../components/ScrollMotion';
 
 export const Organisasi: React.FC = () => {
   const [org, setOrg] = useState<OrganizationMember[]>([]);
@@ -33,7 +33,7 @@ export const Organisasi: React.FC = () => {
 
   const getMember = (pos: ClassPosition) => org.find(o => o.position === pos);
 
-  // Helper card component matching the exact poster UI card frame from reference image
+  // Helper card component for standard single member positions
   const OrgCard = ({
     position,
     badgeText,
@@ -41,15 +41,15 @@ export const Organisasi: React.FC = () => {
     borderColorClass = 'border-slate-800',
     cardBgClass = 'bg-white text-slate-950',
     accentColor = 'blue',
-    size = 'normal'
+    isTeacher = false
   }: {
     position: ClassPosition;
     badgeText: string;
     badgeColorClass?: string;
     borderColorClass?: string;
     cardBgClass?: string;
-    accentColor?: 'gold' | 'blue' | 'black' | 'orange';
-    size?: 'large' | 'normal' | 'compact';
+    accentColor?: 'gold' | 'blue' | 'black' | 'orange' | 'indigo' | 'emerald';
+    isTeacher?: boolean;
   }) => {
     const member = getMember(position);
     const student = member?.student;
@@ -61,7 +61,15 @@ export const Organisasi: React.FC = () => {
         ? 'border-cyan-400 shadow-[0_4px_20px_rgba(34,211,238,0.15)]'
         : accentColor === 'orange'
         ? 'border-orange-400 shadow-[0_4px_20px_rgba(251,146,60,0.15)]'
+        : accentColor === 'indigo'
+        ? 'border-indigo-400 shadow-[0_4px_20px_rgba(129,140,248,0.15)]'
+        : accentColor === 'emerald'
+        ? 'border-emerald-400 shadow-[0_4px_20px_rgba(52,211,153,0.15)]'
         : 'border-slate-800 shadow-md';
+
+    const displayName = isTeacher
+      ? (member?.custom_name || 'Bapak / Ibu Wali Kelas')
+      : (student?.name || member?.custom_name || 'Belum Ditentukan');
 
     return (
       <div className="relative group w-full flex flex-col items-center my-1">
@@ -72,13 +80,17 @@ export const Organisasi: React.FC = () => {
           {badgeText}
         </div>
 
-        {/* Card Body with Chamfer/Angled Accent Corners */}
+        {/* Card Body */}
         <div
           className={`w-full rounded-2xl border-2 p-3 sm:p-4 flex items-center gap-3 transition-all duration-300 ${accentBorder} ${cardBgClass} group-hover:scale-[1.02]`}
         >
           {/* Avatar / Photo Box */}
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-100 border-2 border-slate-300 overflow-hidden flex-shrink-0 relative shadow-inner flex items-center justify-center">
-            {student?.photo_url ? (
+            {isTeacher ? (
+              <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-600">
+                <GraduationCap className="w-7 h-7 stroke-[2]" />
+              </div>
+            ) : student?.photo_url ? (
               <img
                 src={student.photo_url}
                 alt={student.name}
@@ -95,15 +107,163 @@ export const Organisasi: React.FC = () => {
           {/* Name & Details */}
           <div className="flex-1 min-w-0 text-left">
             <h4 className="font-extrabold text-sm sm:text-base text-slate-900 truncate leading-snug">
-              {member?.custom_name || student?.name || 'EDIT DISINI'}
+              {displayName}
             </h4>
-            {student && (
+            {isTeacher ? (
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200 uppercase tracking-wider">
+                  Guru Pembimbing • SMKN 9 Surakarta
+                </span>
+              </div>
+            ) : student ? (
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                   Absen #{student.attendance_number}
                 </span>
               </div>
+            ) : (
+              <span className="text-[11px] text-slate-400 italic">Pilih di Admin</span>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // UNIFIED 2-IN-1 BUMAS CARD COMPONENT
+  const UnifiedBumasCard = () => {
+    const bumas1 = getMember('Bumas 1');
+    const bumas2 = getMember('Bumas 2');
+
+    const bumasList = [
+      { label: 'BUMAS 1', member: bumas1, student: bumas1?.student },
+      { label: 'BUMAS 2', member: bumas2, student: bumas2?.student },
+    ];
+
+    return (
+      <div className="relative group w-full flex flex-col items-center my-1">
+        {/* Badge Header Ribbon */}
+        <div className="z-10 -mb-2 px-5 py-1.5 rounded-md font-black uppercase tracking-widest text-[11px] sm:text-xs shadow-md border-2 border-slate-950 bg-cyan-400 text-slate-950 flex items-center gap-2 whitespace-nowrap">
+          <Users className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>BUMAS (HUBUNGAN MASYARAKAT)</span>
+        </div>
+
+        {/* Card Body Container holding 2 BUMAS members together */}
+        <div className="w-full rounded-2xl border-2 border-cyan-400 bg-cyan-50/50 p-4 sm:p-5 shadow-[0_4px_20px_rgba(34,211,238,0.15)] group-hover:scale-[1.01] transition-all">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            {bumasList.map((item, idx) => {
+              const student = item.student;
+              const name = student?.name || item.member?.custom_name || 'Belum Ditentukan';
+
+              return (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl border border-cyan-200 p-3 flex items-center gap-3 shadow-sm hover:border-cyan-400 transition-colors"
+                >
+                  {/* Avatar */}
+                  <div className="w-11 h-11 rounded-lg bg-cyan-100 border border-cyan-300 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {student?.photo_url ? (
+                      <img
+                        src={student.photo_url}
+                        alt={student.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-cyan-800 font-bold text-xs">
+                        {student ? student.name.charAt(0) : item.label}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-700 block">
+                      {item.label}
+                    </span>
+                    <h5 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                      {name}
+                    </h5>
+                    {student && (
+                      <span className="text-[10px] font-mono font-bold text-slate-500">
+                        Absen #{student.attendance_number}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // UNIFIED 3-IN-1 MPK CARD COMPONENT
+  const UnifiedMPKCard = () => {
+    const mpk1 = getMember('MPK 1');
+    const mpk2 = getMember('MPK 2');
+    const mpk3 = getMember('MPK 3');
+
+    const mpkList = [
+      { label: 'MPK 1', member: mpk1, student: mpk1?.student },
+      { label: 'MPK 2', member: mpk2, student: mpk2?.student },
+      { label: 'MPK 3', member: mpk3, student: mpk3?.student },
+    ];
+
+    return (
+      <div className="relative group w-full flex flex-col items-center my-1">
+        {/* Badge Header Ribbon */}
+        <div className="z-10 -mb-2 px-5 py-1.5 rounded-md font-black uppercase tracking-widest text-[11px] sm:text-xs shadow-md border-2 border-slate-950 bg-emerald-400 text-slate-950 flex items-center gap-2 whitespace-nowrap">
+          <Users className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>MPK (MAJELIS PERWAKILAN KELAS)</span>
+        </div>
+
+        {/* Card Body Container holding 3 MPK members together */}
+        <div className="w-full rounded-2xl border-2 border-emerald-400 bg-emerald-50/50 p-4 sm:p-5 shadow-[0_4px_20px_rgba(52,211,153,0.15)] group-hover:scale-[1.01] transition-all">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+            {mpkList.map((item, idx) => {
+              const student = item.student;
+              const name = student?.name || item.member?.custom_name || 'Belum Ditentukan';
+
+              return (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl border border-emerald-200 p-3 flex items-center gap-3 shadow-sm hover:border-emerald-400 transition-colors"
+                >
+                  {/* Avatar */}
+                  <div className="w-11 h-11 rounded-lg bg-emerald-100 border border-emerald-300 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {student?.photo_url ? (
+                      <img
+                        src={student.photo_url}
+                        alt={student.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-emerald-800 font-bold text-xs">
+                        {student ? student.name.charAt(0) : item.label}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                      {item.label}
+                    </span>
+                    <h5 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                      {name}
+                    </h5>
+                    {student && (
+                      <span className="text-[10px] font-mono font-bold text-slate-500">
+                        Absen #{student.attendance_number}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -118,10 +278,10 @@ export const Organisasi: React.FC = () => {
         {/* Background Street-Art Decorative Pattern Overlay */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
         
-        {/* Top Left Stamp: DISCIPLINE SUCCESS */}
+        {/* Top Left Stamp: SMKN 9 SURAKARTA */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex items-center gap-2">
           <span className="bg-slate-950 text-white font-black text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1 -rotate-2 shadow-md border border-slate-800">
-            DISCIPLINE SUCCESS
+            SMKN 9 SURAKARTA
           </span>
         </div>
 
@@ -129,7 +289,7 @@ export const Organisasi: React.FC = () => {
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 flex flex-col items-end gap-1">
           <div className="flex items-center gap-0.5 bg-slate-950 text-white px-2.5 py-0.5 text-[10px] font-mono font-bold rotate-1">
             <span>#</span>
-            <span className="uppercase">KELASBITAHEBAT</span>
+            <span className="uppercase">ANIMASIHEBAT</span>
           </div>
           <div className="flex items-center gap-1 text-amber-500 font-black">
             <Zap className="w-5 h-5 fill-amber-400 text-slate-950 stroke-[2.5]" />
@@ -169,7 +329,7 @@ export const Organisasi: React.FC = () => {
 
           {/* Slogan Ribbon */}
           <p className="text-xs sm:text-sm font-extrabold tracking-wider uppercase text-slate-800 flex items-center justify-center gap-1.5 flex-wrap">
-            <span>BERSAMA KITA</span>
+            <span>SMKN 9 SURAKARTA</span>
             <span className="bg-cyan-500 text-slate-950 px-2 py-0.5 rounded font-black text-xs shadow-sm">
               KOMPAK
             </span>
@@ -186,27 +346,29 @@ export const Organisasi: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8 relative z-10 my-4">
-            {/* HIERARCHY TREE CONNECTOR CONTAINER */}
-            <div className="flex flex-col items-center max-w-2xl mx-auto space-y-6 relative">
+            {/* CONTINUOUS HIERARCHY TREE CONNECTOR CONTAINER */}
+            <div className="flex flex-col items-center max-w-2xl mx-auto space-y-0 relative">
               
               {/* LEVEL 1: WALI KELAS */}
-              <div className="w-full max-w-sm relative flex flex-col items-center">
+              <ScrollReveal direction="down" scale className="w-full max-w-md flex flex-col items-center">
                 <OrgCard
                   position="Wali Kelas"
                   badgeText="WALI KELAS"
-                  badgeColorClass="bg-slate-950 text-white"
-                  accentColor="blue"
-                  cardBgClass="bg-slate-50 text-slate-950"
+                  badgeColorClass="bg-indigo-900 text-white"
+                  accentColor="indigo"
+                  cardBgClass="bg-indigo-50/40 text-slate-950"
+                  isTeacher={true}
                 />
-                
-                {/* Vertical Connector Line */}
-                <div className="w-1 h-8 bg-slate-950 my-1 relative">
-                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
-                </div>
+              </ScrollReveal>
+              
+              {/* Continuous Vertical Line 1: Wali Kelas -> Ketua */}
+              <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -top-1 -left-0.75"></div>
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
               </div>
 
               {/* LEVEL 2: KETUA KELAS */}
-              <div className="w-full max-w-sm relative flex flex-col items-center">
+              <ScrollReveal direction="down" scale className="w-full max-w-md flex flex-col items-center">
                 <OrgCard
                   position="Ketua"
                   badgeText="KETUA KELAS"
@@ -214,15 +376,16 @@ export const Organisasi: React.FC = () => {
                   accentColor="gold"
                   cardBgClass="bg-white text-slate-950"
                 />
+              </ScrollReveal>
 
-                {/* Vertical Connector Line */}
-                <div className="w-1 h-8 bg-slate-950 my-1 relative">
-                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
-                </div>
+              {/* Continuous Vertical Line 2: Ketua -> Wakil */}
+              <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -top-1 -left-0.75"></div>
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
               </div>
 
               {/* LEVEL 3: WAKIL KETUA KELAS */}
-              <div className="w-full max-w-sm relative flex flex-col items-center">
+              <ScrollReveal direction="down" scale className="w-full max-w-md flex flex-col items-center">
                 <OrgCard
                   position="Wakil Ketua"
                   badgeText="WAKIL KETUA KELAS"
@@ -230,81 +393,80 @@ export const Organisasi: React.FC = () => {
                   accentColor="blue"
                   cardBgClass="bg-slate-50 text-slate-950"
                 />
+              </ScrollReveal>
 
-                {/* Vertical Line splitting to Sekretaris & Bendahara */}
-                <div className="w-1 h-6 bg-slate-950 my-1 relative"></div>
+              {/* Continuous Vertical Line 3: Wakil -> Split Line */}
+              <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -top-1 -left-0.75"></div>
               </div>
 
-              {/* LEVEL 4: SEKRETARIS & BENDAHARA */}
+              {/* LEVEL 4: SEKRETARIS & BENDAHARA (WITH CONNECTED HORIZONTAL T-JUNCTION) */}
               <div className="w-full relative">
-                {/* Horizontal Split Line */}
-                <div className="hidden sm:block absolute top-0 left-[25%] right-[25%] h-1 bg-slate-950"></div>
+                {/* Horizontal T-Bar connecting Left & Right */}
+                <div className="hidden sm:block absolute top-0 left-[25%] right-[25%] h-1 bg-slate-950">
+                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute top-1/2 left-0 -translate-y-1/2"></div>
+                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute top-1/2 right-0 -translate-y-1/2"></div>
+                </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
-                  <div className="relative flex flex-col items-center">
-                    <div className="hidden sm:block w-1 h-3 bg-slate-950 -mt-2 mb-1"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-3">
+                  <ScrollReveal direction="left" scale className="relative flex flex-col items-center">
+                    <div className="hidden sm:block w-1 h-4 bg-slate-950 -mt-3 mb-1"></div>
                     <OrgCard
                       position="Sekretaris"
                       badgeText="SEKRETARIS"
                       badgeColorClass="bg-slate-950 text-white"
                       accentColor="black"
                     />
-                  </div>
+                  </ScrollReveal>
 
-                  <div className="relative flex flex-col items-center">
-                    <div className="hidden sm:block w-1 h-3 bg-slate-950 -mt-2 mb-1"></div>
+                  <ScrollReveal direction="right" scale className="relative flex flex-col items-center">
+                    <div className="hidden sm:block w-1 h-4 bg-slate-950 -mt-3 mb-1"></div>
                     <OrgCard
                       position="Bendahara"
                       badgeText="BENDAHARA"
                       badgeColorClass="bg-slate-950 text-white"
                       accentColor="black"
                     />
-                  </div>
+                  </ScrollReveal>
                 </div>
               </div>
 
-              {/* SEKSI-SEKSI HEADER RIBBON */}
-              <div className="w-full pt-6 flex justify-center">
-                <div className="bg-slate-950 text-white font-black text-xs sm:text-sm uppercase tracking-widest px-6 py-1.5 rounded-sm shadow-md border border-slate-800 flex items-center gap-2">
-                  <span className="text-cyan-400">//</span>
-                  <span>SEKSI - SEKSI</span>
-                  <span className="text-cyan-400">//</span>
+              {/* Continuous Vertical Line 4: Sekretaris & Bendahara down to BUMAS */}
+              <div className="w-full relative flex flex-col items-center my-0.5">
+                {/* Horizontal Convergence Bar on desktop */}
+                <div className="hidden sm:block w-[50%] h-1 bg-slate-950 mt-1">
+                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute left-1/2 -translate-x-1/2 -top-0.5"></div>
+                </div>
+                <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                  <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
                 </div>
               </div>
 
-              {/* LEVEL 5: BUMAS 1, BUMAS 2, MPK 1, MPK 2 (4 COLUMNS) */}
-              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <OrgCard
-                  position="Bumas 1"
-                  badgeText="Bumas 1"
-                  badgeColorClass="bg-slate-950 text-white"
-                  accentColor="black"
-                />
+              {/* LEVEL 5: UNIFIED BUMAS (1 & 2 DIGABUNG MENJADI SATU) */}
+              <ScrollReveal direction="up" scale className="w-full">
+                <UnifiedBumasCard />
+              </ScrollReveal>
 
-                <OrgCard
-                  position="Bumas 2"
-                  badgeText="Bumas 2"
-                  badgeColorClass="bg-amber-400 text-slate-950 font-black border border-slate-950"
-                  accentColor="gold"
-                />
-
-                <OrgCard
-                  position="MPK 1"
-                  badgeText="MPK 1"
-                  badgeColorClass="bg-slate-950 text-white"
-                  accentColor="black"
-                />
-
-                <OrgCard
-                  position="MPK 2"
-                  badgeText="MPK 2"
-                  badgeColorClass="bg-amber-400 text-slate-950 font-black border border-slate-950"
-                  accentColor="gold"
-                />
+              {/* Continuous Vertical Line 5: BUMAS down to MPK */}
+              <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -top-1 -left-0.75"></div>
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
               </div>
 
-              {/* ANGGOTA / SELURUH SISWA SECTION */}
-              <div className="w-full pt-8">
+              {/* LEVEL 6: UNIFIED MPK (3 ANGGOTA MPK) */}
+              <ScrollReveal direction="up" scale className="w-full">
+                <UnifiedMPKCard />
+              </ScrollReveal>
+
+              {/* Continuous Vertical Line 6: MPK down to Anggota */}
+              <div className="w-1 h-8 bg-slate-950 relative my-0.5">
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -top-1 -left-0.75"></div>
+                <div className="w-2.5 h-2.5 bg-slate-950 rounded-full absolute -bottom-1 -left-0.75"></div>
+              </div>
+
+              {/* LEVEL 7: ANGGOTA / SELURUH SISWA KELAS */}
+              <ScrollReveal direction="up" scale className="w-full pt-2">
                 <div className="flex justify-center mb-4">
                   <div className="bg-slate-950 text-white font-black text-xs sm:text-sm uppercase tracking-widest px-8 py-2 rounded-sm shadow-md border border-slate-800 flex flex-col items-center">
                     <span className="text-amber-400 font-extrabold text-[10px] tracking-widest">// ANGGOTA //</span>
@@ -331,7 +493,7 @@ export const Organisasi: React.FC = () => {
                     )}
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
 
             </div>
           </div>
@@ -339,14 +501,14 @@ export const Organisasi: React.FC = () => {
 
         {/* Footer Doodles & Corner Elements */}
         <div className="pt-8 flex items-center justify-between border-t-2 border-slate-950 mt-8">
-          {/* Bottom Left Doodle: Crown Smiley */}
+          {/* Bottom Left Doodle */}
           <div className="flex items-center gap-2 text-slate-950">
             <div className="w-10 h-10 rounded-full border-2 border-slate-950 flex items-center justify-center font-bold text-lg bg-amber-300 shadow-sm relative">
               <span>🙂</span>
               <Crown className="w-4 h-4 text-slate-950 absolute -top-2 left-2 fill-amber-400" />
             </div>
             <div className="hidden sm:block text-[10px] font-black uppercase tracking-wider text-slate-700">
-              X ANIMASI 2 • 2026
+              X ANIMASI 2 • SMKN 9 SURAKARTA
             </div>
           </div>
 
