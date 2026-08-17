@@ -27,7 +27,6 @@ export const INITIAL_ORGANIZATION: OrganizationMember[] = [
   { id: 'org-07', position: 'Bumas 2', student_id: '', order_index: 7 },
   { id: 'org-08', position: 'MPK 1', student_id: '', order_index: 8 },
   { id: 'org-09', position: 'MPK 2', student_id: '', order_index: 9 },
-  { id: 'org-10', position: 'MPK 3', student_id: '', order_index: 10 },
 ];
 
 export const INITIAL_SCHEDULES: ScheduleItem[] = [];

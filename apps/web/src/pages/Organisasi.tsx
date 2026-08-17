@@ -199,16 +199,14 @@ export const Organisasi: React.FC = () => {
     );
   };
 
-  // UNIFIED 3-IN-1 MPK CARD COMPONENT
+  // UNIFIED 2-IN-1 MPK CARD COMPONENT
   const UnifiedMPKCard = () => {
     const mpk1 = getMember('MPK 1');
     const mpk2 = getMember('MPK 2');
-    const mpk3 = getMember('MPK 3');
 
     const mpkList = [
       { label: 'MPK 1', member: mpk1, student: mpk1?.student },
       { label: 'MPK 2', member: mpk2, student: mpk2?.student },
-      { label: 'MPK 3', member: mpk3, student: mpk3?.student },
     ];
 
     return (
@@ -219,9 +217,9 @@ export const Organisasi: React.FC = () => {
           <span>MPK (MAJELIS PERWAKILAN KELAS)</span>
         </div>
 
-        {/* Card Body Container holding 3 MPK members together */}
+        {/* Card Body Container holding 2 MPK members together */}
         <div className="w-full rounded-2xl border-2 border-emerald-400 bg-emerald-50/50 p-4 sm:p-5 shadow-[0_4px_20px_rgba(52,211,153,0.15)] group-hover:scale-[1.01] transition-all">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             {mpkList.map((item, idx) => {
               const student = item.student;
               const name = student?.name || item.member?.custom_name || 'Belum Ditentukan';

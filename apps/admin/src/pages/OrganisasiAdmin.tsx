@@ -28,8 +28,7 @@ export const OrganisasiAdmin: React.FC = () => {
 
   const mpkPositions: ClassPosition[] = [
     'MPK 1',
-    'MPK 2',
-    'MPK 3'
+    'MPK 2'
   ];
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
