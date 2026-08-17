@@ -728,6 +728,11 @@ export const DataStore = {
       mediaList = getLocalData<MediaFile[]>(LS_KEYS.MEDIA, INITIAL_MEDIA);
     }
 
+    // Filter out old legacy placeholder mock items if any exist in local storage
+    mediaList = mediaList.filter(
+      item => item.id !== 'med-01' && item.id !== 'med-02' && item.id !== 'med-03' && item.id !== 'med-04' && item.id !== 'media-1'
+    );
+
     // Always sort by upload/created date descending (newest first)
     return mediaList.sort((a, b) => {
       const dateA = new Date(a.created_at || 0).getTime();
